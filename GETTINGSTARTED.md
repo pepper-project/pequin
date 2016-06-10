@@ -2,7 +2,7 @@
 
 This document gives a brief, high-level overview of the Pepper system. It
 assumes you've already installed the prerequisites; if you haven't, see
-README.txt for a roadmap.
+README.md for a roadmap.
 
 ## Directory organization ##
 

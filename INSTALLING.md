@@ -1,6 +1,9 @@
 # Installing pepper dependencies
 
-There are two steps here.
+This file provides some information about the dependencies required to
+use the pepper codebase. Installation scripts are provided for several
+common distros, but this information should help if you're installing
+on other distributions.
 
 First, you will need a bunch of tools that your distribution almost
 certainly packages for you.  See "Tools." If you are using a distribution

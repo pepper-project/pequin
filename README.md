@@ -58,3 +58,8 @@ overview of the process.
 
 This source code is released under a BSD-style license. See LICENSE
 for more details.
+
+## Contact ##
+
+Please contact pepper@nyu.systems for any questions and comments.
+
