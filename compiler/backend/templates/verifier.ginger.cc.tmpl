@@ -1,0 +1,19 @@
+\#include <${output_prefix}_v.h>
+\#include <apps_sfdl_hw/${computation_classname}_v_inp_gen_hw.h>
+
+${computation_classname}Verifier::${computation_classname}Verifier(int
+batch, int reps, int optimize_answers, char *prover_url, int in_size,
+int out_size, int num_v, int num_c, const char *file_name_f1_index): GComputationVerifier(batch, reps,
+in_size, out_size, optimize_answers, num_v, num_c, prover_url, (char *)
+NAME_PROVER, file_name_f1_index)
+{
+  input_creator = new ${computation_classname}VerifierInpGenHw(v);
+}
+
+void ${computation_classname}Verifier::create_gamma0(int rho_i) {
+  parse_gamma0("${gamma0_file_name}", rho_i);
+}
+
+void ${computation_classname}Verifier::create_gamma12() {
+  parse_gamma12("${gamma12_file_name}");
+}

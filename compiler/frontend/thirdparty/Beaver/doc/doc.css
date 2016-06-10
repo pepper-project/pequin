@@ -1,0 +1,166 @@
+body {
+	margin: 0;
+	padding: 0;
+	background-color: #ffffff;
+	font-family: Verdana, "Bitstream Vera Sans", Tahoma, Arial, sans-serif;
+}
+
+img {
+	border: 0;
+}
+
+a {
+	text-decoration: none;
+	font-weight: bold;
+	padding: 1px;
+	border: 1px solid #ffffff;
+}
+
+a:link {
+	color: #ff8000;
+}
+
+a:visited {
+	color: #ff8000;
+}
+
+a:hover {
+	color: #ff8000;
+	border: 1px solid #ff8000;
+	background-color: #ffefad;
+}
+
+h1#top {
+	margin: 0;
+	font-size: 2em;
+	color: #660000;
+	border-top: 3px solid #663300;
+	border-bottom: 3px solid #663300;
+	background-color: #de9831;
+}
+
+div#nav {
+	position: absolute;
+	left: 6px;
+	width: 88px;
+	padding-top: 6px;
+	font-family: Tahoma, Arial, Verdana, sans-serif;
+	font-size: 85%;
+}
+
+div#nav a {
+	display: block;
+}
+
+div.iln {
+	font-weight: bold;
+	color: #660000;
+	padding: 1px;
+	border: 1px solid #ffffff;
+}
+
+div#ctx {
+	margin-left: 100px;
+	padding: 6px;
+}
+
+a.lss {
+	margin-top: 1em;
+}
+
+img#bvr {
+	float: right;
+	width: 112px;
+}
+
+h2 {
+	color: #660000;
+	font-size: 1.5em;
+	margin-top: 0px;
+}
+
+h3 {
+	color: #660000;
+	font-size: 1.2em;
+	margin-top: 0px;
+	margin-left: 1em;
+}
+
+p {
+	margin-left: 2em;
+}
+
+pre {
+	border: 1px solid #663300;
+	color: #663300;
+	background-color: #ffec94;
+	padding: 1em;
+	margin-left: 2em;
+}
+
+pre i {
+	color: #204080;
+}
+
+code {
+	font-weight: bold;
+	color: #660000;
+}
+
+dl {
+	margin-left: 2em;
+}
+
+dt {
+	font-weight: bold;
+	color: #660000;
+}
+
+dt i {
+	color: #204080;
+}
+
+dd {
+	margin: 0 0 0.5em 6ex;
+}
+
+dl.opt dt {
+	float: left;
+	padding-left: 1ex;
+	padding-right: 1ex;
+	background-color: #ffec94;
+}
+
+dl.opt dd {
+	margin: 0 0 0.5em 3em;
+}
+
+ul li {
+	margin-bottom: 0.5em;
+}
+
+i.note {
+	font-weight: bold;
+	color: #208000;
+}
+
+table {
+	margin-left: 2em;
+	background-color: #ffec94;
+	border: 1px solid #663300;
+}
+
+thead {
+	font-weight: bold;
+	color: #660000;
+	background-color: #de9831;
+}
+
+tr.hl {
+	background-color: #ffcc55;
+}
+
+td {
+	padding-left: 0.5ex;
+	padding-right: 0.5ex;
+}

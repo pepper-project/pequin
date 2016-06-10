@@ -1,0 +1,52 @@
+/*
+ * Insertion sort which runs in Theta(n^2) time.
+ */
+program insertion_sort {
+  //Constants
+  const m = 256;
+
+  //types
+  type iterator = float; //The type of loop iterators is ignored
+  type Input = struct{int<32>[m] a};
+  type Output = struct {int<32>[m] Ya};
+
+  //functions
+
+  //main method, called "output"
+  function Output output (Input X){
+    var iterator i;
+    var iterator j;
+    var int[m] a;
+    var int[m] b;
+    var boolean inserted;
+
+    a = X.a;
+    b = a;
+
+    for(i = 0 to m-1) {
+      inserted = false;
+      //Try to insert a[i] into a[0...i-1]
+      for(j = 0 to i-1) {
+        if (b[i] < b[j]) {
+          if (inserted) {
+            b[j] = a[j-1];
+          } else {
+            b[j] = a[i];
+            inserted = true;
+          }
+        } else {
+          b[j] = a[j];
+        }
+      }
+      if (inserted) {
+        b[i] = a[i-1];
+      } else {
+        b[i] = a[i];
+      }
+      //update list
+      a = b;
+    }
+
+    output.Ya = a;
+  }
+}

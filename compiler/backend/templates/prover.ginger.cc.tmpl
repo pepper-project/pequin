@@ -1,0 +1,16 @@
+\#include <${output_prefix}_p.h>
+\#include <apps_sfdl_hw/${computation_classname}_p_exo.h>
+
+${computation_classname}Prover::${computation_classname}Prover(int ph,
+int b_size, int num_r, int in_size, int out_size, int num_v, int num_c,
+const char *file_name_f1_index): GComputationProver(ph, b_size, num_r, in_size, out_size,
+  num_v, num_c, (char *) PROVER_NAME, file_name_f1_index) {
+  exogenous_checker = new ${computation_classname}ProverExo();
+}
+
+void ${computation_classname}Prover::create_gamma12() {
+  parse_gamma12("${gamma12_file_name}");
+}
+void ${computation_classname}Prover::interpret_constraints() {
+  ${computation}
+}

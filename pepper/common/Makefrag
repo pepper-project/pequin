@@ -1,0 +1,26 @@
+#
+# Makefile fragment for common code.
+# This is NOT a complete makefile;
+# you must run GNU make in the top-level directory
+# where the GNUmakefile is located.
+#
+
+OBJDIRS += common 
+SRCDIR = . 
+
+COMMON_SRCFILES :=          \
+    common/sha1.cpp \
+    common/sha256.cpp \
+    common/utility.cpp      \
+    common/measurement.cpp  \
+    common/mpnvector.cpp    \
+    common/mpnclass.cpp    \
+    common/mpnops.cpp    \
+    common/math.cpp    \
+    common/memory.cpp \
+    common/waksman_router.cpp \
+
+# Only build files if they exist.
+COMMON_SRCFILES := $(wildcard $(COMMON_SRCFILES))
+
+COMMON_OBJFILES := $(patsubst %.cpp, $(OBJDIR)/%.o, $(COMMON_SRCFILES))

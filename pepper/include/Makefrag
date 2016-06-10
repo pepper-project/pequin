@@ -1,0 +1,15 @@
+OBJDIRS += include
+SRCDIR = . 
+
+INCLUDE_SRCFILES := \
+	include/db.cpp \
+	include/binary_tree.cpp \
+	include/binary_tree_int_int.cpp \
+	include/binary_tree_int_hash_t.cpp \
+	include/fix_t.cpp \
+	include/avl_tree.cpp
+
+# Only build files if they exist.
+INCLUDE_SRCFILES := $(wildcard $(INCLUDE_SRCFILES))
+
+INCLUDE_OBJFILES := $(patsubst %.cpp, $(OBJDIR)/%.o, $(INCLUDE_SRCFILES))

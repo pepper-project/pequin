@@ -1,0 +1,12 @@
+<project>
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>net.sf.beaver</groupId>
+    <artifactId>beaver</artifactId>
+    <version>0.9.10</version>
+  </parent>
+
+  <artifactId>beaver-rt</artifactId>
+
+</project>

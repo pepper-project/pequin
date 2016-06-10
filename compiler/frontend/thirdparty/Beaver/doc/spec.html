@@ -1,0 +1,249 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+<title>Beaver - a LALR Parser Generator</title>
+<link type="text/css" rel="stylesheet" href="doc.css"/>
+</head>
+<body>
+<h1 id="top">Beaver - a LALR Parser Generator</h1>
+<div id="nav">
+	<a href="index.html">Introduction</a>
+	<a href="how2run.html">How to Run It</a>
+	<div class="iln">Specification Syntax</div>
+	<a href="recovery.html">Error Recovery</a>
+	<a href="scanners.html">Scanner API</a>
+	<a href="asts.html">Building ASTs</a>
+
+	<a href="http://sourceforge.net/projects/beaver" class="lss">SF Project</a>
+	<a href="http://sourceforge.net/project/showfiles.php?group_id=96950">Download</a>
+	<a href="http://sourceforge.net" class="lss"><img src="http://sourceforge.net/sflogo.php?group_id=96950&amp;type=1" width="88" height="31" alt="SourceForge.net"/></a>
+</div>
+<div id="ctx">
+<img id="bvr" src="beaver.png" alt="Beaver"/>
+<h2>Grammar Specification</h2>
+
+<h3>Options and Declarations</h3>
+
+<p>A grammar specifications may contain directives that are used to customize the generated parser or declare how some symbols will be used in the grammar. All options
+can be omitted from the grammar, and if this is the case compiler will select some reasonable defaults. Declarations though are used to augment production rules, so that
+compiler is able to make a decision, which it otherwise would not be able to do.
+</p>
+
+<p>Options and declarations, if used, must be specified before production rules.
+</p>
+
+<dl>
+<dt><code>%header <i>{: java code :}</i> ;</code></dt> <dd>This option declares Java code that will be inserted verbatim at the top of the generated source file.
+The only Java elements that can be used here are comments.</dd>
+
+<dt><code>%package <i>"package.name"</i> ;</code></dt> <dd>Name of a package of the parser.</dd>
+
+<dt><code>%import <i>"package_or_Type" [, "package_or_Type" ...]</i> ;</code></dt> <dd>Which Java packages and types should be imported.</dd>
+
+<dt><code>%class <i>"ClassName"</i> ;</code></dt> <dd>This option is used to declare the name of the Java class for the generated parser. If the option is not used,
+the compiler uses the specification file name to name the generated parser class.</dd>
+
+<dt><code>%embed <i>{: java code :}</i> ;</code></dt> <dd>This option is used to declare additional code that compiler copies varbatim into a parser class.</dd>
+
+<dt><code>%init <i>{: java code :}</i> ;</code></dt> <dd>This option is used to declare a code that compiler copies into a parser constructor. Typically is used to initialized
+parser's elements declared via <code>%embed</code></dd>
+
+<dt><code>%terminals <i>symbol [, symbol ...]</i> ;</code></dt> <dd>Lists terminals that scanner will provide to a parser.</dd>
+
+<dt><code>%typeof <i> symbol [, symbol ...]</i> = <i>"JavaType"</i> ;</code></dt> <dd>Here you declare Java types for grammar symbols. Not every symbol needs to have
+an associated type for its value. Additionally this declaration is optional and Beaver will generate a working parser even if all the symbols are left without type
+information. In this case though the action routines will reference actual symbols and not their values. Putting type information on symbols will make their values available
+instead.</dd>
+
+<dt><code>%left <i>symbol [, symbol ...]</i> ;</code></dt> <dd>(Also <code>%right</code> and <code>%nonassoc</code>). These directives declare precedence and associativity
+of terminals. Each declaration places symbols it lists at a certain precedence level. The directives used earlier in the specification provide higher precedence for their
+symbols. (Note: this is different/reversal from what other compiler-compilers do. It makes the precedence table appear more natural and readable though.)</dd>
+
+<dt><code>%goal <i>symbol</i> ;</code></dt> <dd>Declares what is the goal of the parser, i.e. what symbol it will produce as a result of parsing. Grammar may declare more than
+one goal by using multiple <code>%goal</code> declarations. In that case the second and all subsequent goals are considered alternatives. Beaver generates special <code>Sentinels</code>
+class with "tags" for these alternative goals. To make generated parser match them, instead of a main goal, an overloaded <code>parse</code> method is called that accepts additional
+argument - an alternative goal tag.
+</dd>
+</dl>
+
+<h3>Production Rules</h3>
+
+<p>The bulk of a specification usually is represented by production rules. All these rules combined represent the grammar of a language that the generated parser will
+recognize. Each rule declares a nonterminal symbol and declares the sequence of other symbols that will produce that nonterminal. Additionally each rule may carry optional
+explicit rule precedence declaration and action routine that will be executed when parser reduces a group of symbols that define a symbol to the nonterminal. Production
+rules are terminated with a semicolon.
+<pre>
+symbol = symbol_a symbol_b ... @ PRECSYM {: action routine code :} ;
+</pre>
+<p>The explicit rule precedence is optional and if not used (and usually it is not used) the compiler will assign a precedence and associativity to a rule using the
+<b>rightmost</b> terminal symbol from the right-hand side that has precedence defined. If such terminal cannot be found a rule will be nonassociative and have the precedence
+set to the lowest possible level, so that by default generated parser will prefer shifting terminals. This helps to resolve automatically most conflicts, but in more
+complex cases compiler might not be able to decide what action to take. It reports a conflict and grammar will need to be altered either by ensuring a precedence is assigned
+to conflicting rules - explicitly or via the rightmost terminal, - or by rewriting some productions.
+</p>
+<p>There can be more than one rule that defines the same nonterminal symbol. Such rules together describe all the possible definitions of the symbol.
+</p>
+<pre>
+symbol_x = symbol_a symbol_b ... {: action routine code :} ;
+symbol_x = symbol_c symbol_d ... {: action routine code :} ;
+symbol_x = symbol_e symbol_f ... {: action routine code :} ;
+</pre>
+<p>Or alternatively the same can be expressed using more compact syntax:
+</p>
+<pre>
+symbol_x = symbol_a symbol_b ... {: action routine code :}
+         | symbol_c symbol_d ... {: action routine code :}
+         | symbol_e symbol_f ... {: action routine code :}
+         ;
+</pre>
+<p>Matching symbols to their definition is the main job of the parser. Yet in the end the only information we'll get is that the entire input matches the goal of the grammar.
+While this might be useful by itself, in most cases we need to do more. In order to perform translation of the source into some structure production rules may have Java code
+attached to them. These "action routines" will be called when the symbols on the right-hand side were matched and are about to be reduced to a single nonterminal from the
+left-hand side of the rule.
+</p>
+<p>In order to access values of matched symbols from within Java code one can name (assign aliases to) the right-hand side symbols. Consider the following example:
+</p>
+<pre>
+%%
+
+%left RPAREN;
+%left MULT, DIV;
+%left PLUS, MINUS;
+
+%typeof NUMBER = "Number";
+%typeof expr = "Expr";
+
+%%
+
+expr = expr.a MULT  expr.b   {: return new Expr(a.value * b.value); :}
+     | expr.a DIV   expr.b   {: return new Expr(a.value / b.value); :}
+     | expr.a PLUS  expr.b   {: return new Expr(a.value + b.value); :}
+     | expr.a MINUS expr.b   {: return new Expr(a.value - b.value); :}
+     | NUMBER.n              {: return new Expr(n.doubleValue());   :}
+     | LPAREN expr.e RPAREN  {: return e; :}
+     ;
+</pre>
+<p>Here names after dots are aliases for the right-hand side symbols. Java code later accesses values of these named symbols though aliases. Aliases will have the Java
+type assigned to the symbol they reference. Thus in the preceding example <code>a</code>, <code>b</code> and <code>e</code> have type <code>Expr</code>, while
+<code>n</code> is a <code>Number</code>.
+</p>
+<p>For each named symbol Beaver also generates an additional local variable named <code>_symbol_<i>name</i></code> that references the symbol itself. This can be handly to
+code some actions more efficiently. Consider the following example, where we reuse the <code>list</code> symbol, while adding new elements to a list:
+</p>
+<pre>
+symbols
+    = NAME.name
+      {:
+          ArrayList lst = new ArrayList();
+          lst.add(name);
+          return new Symbol(lst);
+      :}
+    | symbols.list COMMA NAME.name
+      {:
+          list.add(name);
+          return _symbol_list; // no need to create new symbol - we can reuse one that we already have
+      :}
+    ;
+</pre>
+<p>If a grammar symbol does not have a Java type specified for its values, local variables in action routines will reference a symbol itself and not its value. Variable
+<code>_symbol_...</code> won't be created.
+</p>
+<p>The action routine creates a symbol, which it <code>return</code>s. In other words classes of objects action routines return must extend <code>beaver.core.Symbol</code>.
+There is an additional constraint -- constructors of these classes must call Symbol's protected default constructor to properly initialize nonterminal symbols.
+(All other Symbol's constructors are used by scanners to create terminal symbols).
+</p>
+
+<h3>Extended Rule Syntax</h3>
+
+<p>There are two common elements in grammars of almost every language: a part of the symbol definition may be optional, or a part of the definition may be repeated multiple
+times. Though these constructs are easily expressed by simple BNF notation, the additional explicit rules needed for them tend to obscure the primary definitions and add
+burden to maintainability. To overcome these deficiencies Beaver offers extended rule definition syntax, which allows altering the meaning of right-hand side symbols by
+marking them with special meta-characters:
+</p>
+<dl class="opt">
+<dt>?</dt> <dd>a symbol on the right-hand side is optional</dd>
+<dt>+</dt> <dd>a marked symbol represents a nonempty list of symbols</dd>
+<dt>*</dt> <dd>a marked symbol represents a possibly empty list of symbols</dd>
+</dl>
+<p>Beaver uses <code>java.util.ArrayList</code> to build collections of elements for <code>*</code> or <code>+</code> lists. These collections can be accessed directly
+through <code>_list_<i>symbol_alias</i></code> local variables. For convenience though Beaver translates them into arrays which elements have Java type set via
+<code>%typeof</code> or <code>beaver.Symbol</code> if symbols of the element has no type assigned. These arrays are references via <code>symbol_alias</code> local variable.
+Arrays attached to "*" symbols may have zero <code>length</code>.
+</p>
+<p>When a symbol is declared as optional, an action routine may see a special symbol with a <code>null</code> value.
+</p>
+
+<h3>Shortcuts</h3>
+
+<p>For some common "boring" cases Beaver can generate action routines automatically:</p>
+<ul>
+<li>when the right hand side of a rule has only one symbol and the only expected action is to return that symbol, no action routine is needed. Beaver then uses special
+<code>RETURN</code> action routine that returns that symbol.</li>
+<li>when the right hand side has more than one symbol but the only task of the action routine is to return only <b>one</b> of them, explicit coding can be avoided by naming
+that symbol and Beaver will automatically generate a routine that will return a named symbol.</li>
+<li>when the right hand side has more than one symbol but none was marked (as per previous rule), Beaver generates a routine that will return the very last symbol.</li>
+<li>when nonterminal is defined as a list of elements that are separated by some symbol(s), Beaver adds list building routines in the same way it writes code for
+<code>+</code> lists.</li>
+</ul>
+
+<p>Here's an illustration from the Beaver's own grammar:<p>
+<pre>
+declaration
+    = class_name     // for this and other alternatives
+    | class_code     // the "RETURN a single symbol" action will be applied
+    | class_init
+    | grammar_goal
+    | typeof
+    | terminals
+    | left_assoc
+    | right_assoc
+    | nonassoc
+    ;
+
+alias
+    = DOT IDENT.name // an action will be generated that returns an IDENT symbol
+    ;
+
+txt_list
+    = TEXT
+      /* List is created and the TEXT symbol is added to it.
+       * Beaver will generate automaticallt the following code:
+       *
+       *    ArrayList lst = new ArrayList();
+       *    lst.add(TEXT); // not the TEXT literally, but the code to access the symbol representing TEXT
+       *    return new Symbol(lst);
+       */
+    | txt_list COMMA TEXT
+      /* the last RHS (TEXT) symbol is added to the list, i.e. Beaver generates:
+       *    ArrayList lst = (ArrayList) txt_list.value;
+       *    lst.add(TEXT);
+       *    return txt_list;
+       */
+    ;
+</pre>
+<p>Before Beaver starts writing list building routines (as in the last example) it checks whether certain preconditions are true:</p>
+<ul>
+<li>A nonterminal must be defined by 2 production rules.</li>
+<li>One of the rules must have only one symbol in its RHS. This production defines a list start, or a list creation rule.</li>
+<li>Another rule must have 2 or more symbols in its RHS, first symbol must match nonterminal that this rule defines and the last symbol must match RHS symbol of a list
+start prodcution. This production defines a list tail, or a list building rule.</li>
+<li>Both must not have Java code attached.</li>
+</ul>
+<p>A consumer of these lists will see arrays of elements. For example in the following grammar a consumer of the <code>name_list</code> nonterminal will see a list of Strings
+references by the <code>names</code> alias:
+</p>
+<pre>
+%typeof name = "String";
+
+name_list
+    = name
+    | name_list COMMA name
+    ;
+
+interfaces_decl
+    = IMPLEMENTS name_list.names  // here "names" is an instance of "String[]"
+    ;
+</pre>
+</div>
+</body>
+</html>

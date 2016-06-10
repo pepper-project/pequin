@@ -1,0 +1,20 @@
+\#ifndef ${OUTPUT_PREFIX}_V_H_
+\#define ${OUTPUT_PREFIX}_V_H_
+
+\#include <libv/gcomputation_v.h>
+
+\#define NAME_PROVER "${computation_name}"
+
+\#ifdef INTERFACE_MPI
+\#include <${output_prefix}_p.h>
+\#endif
+
+class ${computation_classname}Verifier : public GComputationVerifier {
+  public:
+    ${computation_classname}Verifier(int batch, int reps, int
+    optimize_answers, char *prover_url, int in_size, int out_size, int
+    num_v, int num_c, const char *file_name_f1_index);
+    void create_gamma0(int rho_i);
+    void create_gamma12();
+};
+#endif  // ${OUTPUT_PREFIX}_V_H_

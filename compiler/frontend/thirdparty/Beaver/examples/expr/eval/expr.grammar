@@ -1,0 +1,25 @@
+%package "expr.eval";
+%class "ExpressionParser";
+
+%terminals NUMBER, MULT, DIV, PLUS, MINUS, LPAREN, RPAREN;
+
+%left  RPAREN;
+%right UNARY_MINUS;
+%left  MULT, DIV;
+%left  PLUS, MINUS;
+
+%typeof NUMBER = "Number";
+%typeof expr = "Expr";
+
+%goal expr;
+
+
+expr
+    = expr.a MULT  expr.b           {: return new Expr(a.val * b.val);   :}
+    | expr.a DIV   expr.b           {: return new Expr(a.val / b.val);   :}
+    | expr.a PLUS  expr.b           {: return new Expr(a.val + b.val);   :}
+    | expr.a MINUS expr.b           {: return new Expr(a.val - b.val);   :}
+    | LPAREN expr.e RPAREN          {: return e;                         :}
+    | MINUS expr.e @ UNARY_MINUS    {: return new Expr(-e.val);          :}
+    | NUMBER.n                      {: return new Expr(n.doubleValue()); :}
+    ;

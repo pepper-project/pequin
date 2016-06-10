@@ -1,0 +1,433 @@
+This file documents the file formats used for files generated
+by the program -> constraints compiler. 
+
+At a high level, the compiler performs the following:
+
+C code / SFDL code -> Sequence of assignment statements -> Constraints
+                       ^                        |
+		       |			|
+		       |			|
+		       \----optimization--------/
+
+
+At a low level, the program goes through a number of transformations during
+compiling.
+
+    C code (in pepper/apps_sfdl)   - or -     SFDL code
+      |                                           |
+      |                                           |
+      v                                           |
+ preprocessed C code (in compiler/)               |
+   & .defines file                                |
+      |                                           |
+      |-------------------------------------------/
+      |
+      v
+ .circuit file
+      |
+      |
+      v
+ .circuit file is moved to .circuit2 file <------\
+      |                                          |
+      |                                          |
+      v                            Depending on options to zcc,
+ .circuit2.profile file          optimization may be repeated,
+      |                         resulting in .circuit3, .circuit4, etc.
+      |                                          |
+      v                                          |
+ .circuit file (first optimized form)            |
+      |                                          |
+      |(optional)--->----------------------------/
+      |
+      v
+ .spec, .spec.cons file (in compiler/)
+      |
+      \------ Note - the .spec file is re-generated to remove unecessary
+      |        variables that are copies of output variables, the old .spec
+      |        file is renamed to .spec_tmp
+      |
+      v
+ .pws, .qap, .f1index, 
+ .qap.matrix_a, .qap.matrix_b, .qap.matrix_c files in pepper/bin
+ & .cpp, _cons.cpp, _cons.h, _p.cpp, _p.h, _v.cpp, _v.h, _v_inp_gen.cpp, 
+ _v_inp_gen.h files created in pepper/apps_sfdl_gen,
+ & _p_exo.cpp, _p_exo.h, _v_inp_gen_hw.cpp, _v_inp_gen_hw.h created in
+   pepper/apps_sfdl_hw if they don't already exist
+ & .spec file moved to pepper/apps_sfdl_gen.
+
+ In addition, this file explains the format of "basic constraints" which
+ are tossed around in the memory of the backend of the compiler, but which 
+ never appear in any file.
+
+EXPLANATIONS OF GENERATED FILES:
+
+preprocessed C code: self-explanatory. 
+
+.defines file: All lines of the input .c file that start with #define 
+   are stripped out and put in this file. Used to generate .spec.cons file.
+
+.spec.cons file: In the case of SFDL code, this file contains C code
+defining constant variables representing the constants in the SFDL code.
+In the case of C code, this file contains a constant variable for each
+line in the .defines file of the form #define NAME <integer>. 
+
+_cons.h, _cons.cpp files: contain the contents of the .spec.cons file.
+The only purpose of the _cons.h and _cons.cpp files is to assist with
+writing hand-written exogenous checks.
+
+--------------------- .CIRCUIT FILE ---------------------
+.circuit file:
+Every line has either the form
+i "input" //name type
+or 
+i "output"? operation "inputs" "[" data "]" //name type
+or
+i "output"? "split" s_1 s_2 ... s_N "inputs" "[" data "]" //name type 
+
+In either case:
+i - an integer identifying this input variable or operation
+name - semi-explanatory name for the input variable or the first output variable of the operation
+type - type of each of the output variables of this operation
+   Three formats:
+   "uint" "bits" N - an unsigned int in N bits
+   "int" "bits" N - a signed int in N bits
+   "float" "n_a" Na "n_b" Nb - a diadic rational number with Na and Nb. See
+   ginger.pdf for an explanation of the range of (Na, Nb)-rational numbers.
+   "void" - invalidates the output variable (non-type)
+
+The first form defines an input variable. 
+
+The second and third form defines an operation that should be performed.
+If "output" is present in the second form, the output variables of this
+operation are output variables.
+
+operation, data - describes what operation to perform.
+
+In .circuit files, variables are identified by integers. This creates
+confusion when representing the data for an operation, which may include
+integer constants along with variables.
+
+Hence, inside data, integer and rational constants are always escaped by
+prefixing them with "C".
+
+In other words, constants inside data:
+  take the form
+    "C"i
+  to define an integer constant, or
+    "C"a/b
+  to define a rational constant, where i,a, and b are integers.
+  A diadic rational constant is one where b is a power of two.
+
+Allowed operations and corresponding formats of data:
+
+OPERATION "gate poly": data should be a polynomial of the form:
+     diad-rat-constant "*" "(" integer-poly ")"
+where diad-rat-constant is a diadic rational constant (see constants),
+and integer-poly is:
+  In GINGER mode, any degree-2 polynomial with integer coefficients.
+  In ZAATAR mode, a quadratic-form polynomial with integer coefficients.
+
+  The result of the polynomial is assigned to variable i, the identifier
+  of this operation.
+
+OPERATION "hashget": 
+  data has the form
+  "NUM_HASH_BITS" N "HASH_IN" h_1 h_2 ... h_N "NUM_Y" M "Y" b_1 b_2 ... b_M
+  N and M indicate the number of bits in the hash and the data being
+  retrieved, respectively. 
+  h_1 through h_N are variables or constants containing the bits of
+  the hash. b_1 through b_M are variables which should be assigned the
+  bits of the retrieved data.
+
+OPERATION "hashput":
+  data has the form
+  "NUM_HASH_BITS" N "HASH_OUT" h_1 h_2 ... h_N "NUM_X" M "X" b_1 b_2 ... b_M
+  N and M indicate the number of bits in the hash and the data being
+  stored, respectively. 
+  h_1 through h_N are variables which should be assigned the bits of
+  the retrieved data. b_1 through b_M are variables or constants 
+  containing the bits of the retrieved data.
+
+OPERATION "split":  
+  data is a single variable X, and the s_1 through s_N are variables which 
+  should be assigned the bits of X, from least significant to most.
+
+OPERATION "gate !=": 
+  data has the form 
+   a "!=" b
+  where either a or b can be constants or variables. The boolean result
+  of the != evaluation is written to i, the identifier of this operation.
+
+OPERATION "gate <":
+  data has the form 
+   a "<" b
+  where either a or b can be constants or variables. The boolean result
+  of the < evaluation is written to i, the identifier of this operation.
+
+OPERATION "ramget":
+  data has the form
+   "ADDR" i "NUM_Y" M "Y" b_1 b_2 ... b_M
+  where i is a variable or constant, and the b_1 through b_M are variables
+  that should be assigned the bits of the retrieved data at index i.
+
+OPERATION "ramput":
+  data has the form
+   "ADDR" i "NUM_X" M "X" b_1 b_2 ... b_M
+  where i is a variable or constant, and the b_1 through b_M are variables
+  or constants containing the bits of the data
+  that should be written to index i.
+
+------------------ .SPEC FILE -----------------------------
+
+The format of the .spec file is as follows:
+
+"START_INPUT"
+inputs
+"END_INPUT"
+
+"START_OUTPUT"
+outputs
+"END_OUTPUTS"
+
+"START_VARIABLES"
+variables
+"END_VARIABLES"
+
+"START_CONSTRAINTS"
+constraints
+"END_CONSTRAINTS"
+
+where inputs, outputs, and variables have the form:
+Each line has the form
+id //name type
+ where name and type are as in the .circuit file. 
+ In inputs, each line identifies an input variable with identifier id.
+ In outputs, each line identifies an output variable with identifier id.
+ In variables, each line identifies an intermediate variable with
+ identifier id.
+ All identifiers start with a letter.
+
+ These identifiers can be used in the constraints section.
+
+where constraints has the form:
+
+Note - in a .spec file, all variables start with a letter, so constants are
+not escaped with a "C" as they are in .circuit files.
+
+Each line can have one of the following forms:
+
+"HASHGET" "NUM_HASH_BITS" N "HASH_IN" h_1 h_2 ... h_N "NUM_Y" M "Y" b_1 b_2
+... b_N
+
+--> the N h_i are variables or constants containing bits of the hash, the
+b_i are variables which should be assigned the data retrieved.
+
+"HASHPUT" "NUM_HASH_BITS" N "HASH_OUT" h_1 h_2 ... h_N "NUM_X" M "X" b_1 b_2
+... b_N
+
+--> the N h_i are variables which should be assigned the hash for the M
+databits b_i which may be variables or constants.
+
+a "!=" b "-" c
+
+--> variable c is assigned the boolean result of a != b, where a and b may
+be variables or constants
+
+a "<" b "-" c
+
+--> variable c is assigned the boolean result of a < b, where a and b may
+be variables or constants
+
+"SIL" type "X" a "Y0" "V"i
+
+--> Variable a is split into N many bits (where N is the number of bits
+needed to represent type) and variables with names "V"i through "V"(i +
+N-1)" are assigned the bits of a, from least significant to
+most.
+
+"RAMGET" "ADDR" i "NUM_Y" M "Y" b_1 b_2 ... b_M
+
+--> where i is a variable or constant, and the b_1 through b_M are variables
+  that should be assigned the bits of the retrieved data at index i.
+
+"RAMPUT" "ADDR" i "NUM_X" M "X" b_1 b_2 ... b_M
+
+--> where i is a variable or constant, and the b_1 through b_M are variables
+  or constants holding the bits that should be stored at index i.
+
+Otherwise, if the line does not fit into any of the above forms, it must
+have the following form:
+
+
+"FAST_RAMPUT" "ADDR" a "VALUE" b "CONDITION" c
+"FAST_RAMGET" "ADDR" a "VALUE" b "CONDITION" c
+
+--> a memory operation. The backend expands this to a tuple <addr, ts,
+type, value>
+
+"MEMORY_CONSISTENCY" "WORD_WIDTH" n "WIDTH" w "DEPTH" d "INPUT" i1 i2 ... i4*w
+
+--> this get expanded to a Benes network which sorts all memory
+operations and a bunch of comparison operations which represents
+pair-wise memory consistency.
+
+--> n is the number of bits in the address and bits in a memory cell.
+
+(In ginger)
+polynomial "-" (a "*")? var
+
+(In Zaatar)
+"(" linear1 ")" "*" "(" linear2 ")" + "(" linear3 "-" (a "*")? var ")"
+
+where var identifies some variable. This means that polynomial should
+be evaluated (linear1 * linear2 + linear3, in the final case) 
+and the result should be assigned to variable var.
+
+a is an integer power-of-two. If it is present, 
+the assigned result to var is divided a.
+
+------------------------ .f1index ------------------------
+The .f1index is a permutation of the integers 1 through m where
+m is the number of intermediate variables in the constraint set.
+The integers are space delimited.
+
+------------------------ .pws ----------------------------
+Each line of the .pws file includes a command for the prover to perform.
+
+Variables in a .pws file are identified in one of three forms:
+  "I"i - the i'th input variable
+  "O"i - the i'th output variable
+  "V"i - the i'th intermediate variable
+
+Line formats:
+
+"SIL" type "X" a "Y0" "V"i
+   - Same as in .spec file. Bits are assigned least significant to 
+   most significant.
+
+"SI" a "into" N "bits at" "V"i
+   - Split variable a into N bits, and assign the bits 
+   to "V"i through "V"(i+N-1), most significant to least significant.
+
+"P" a "=" integer-polynomial "E"
+   - Evaluate integer-polynomial, assign the result to a.
+
+"!=" "M" a "X1" b "X2" c "Y" d
+   - We don't go into the full details here, but variable
+    d receives the boolean result of whether b != c, and a 
+    is assigned some auxiliary data.
+
+"<I" "N_0" "V"i "N" N "Mlt" b "Meq" c "Mgt" d "X1" e "X2" f "Y" g
+   - Again, g receives the boolean result of whether e < f. 
+   The N variables "V"i through "V"(i+N-1) are used as auxilliary
+   variables, as are b, c, and d.
+
+"<F" "N_0" "V"i "Na" Na "N" num "D_0" "V"j "Nb" Nb "D" den "ND" numden
+"Mlt" a "Meq" b "Mgt" c "X1" d "X2" e "Y" f
+   - Diadic rational equivalent of <I.
+
+"/" a "=" b "/" c
+   - Divide b by c, c is a constant power of two, and assign the result to a.
+     a may be the same variable as b.
+
+"GET_BLOCK_BY_HASH" h_1 h_2 ... h_H "NUM_Y" N "Y" b_1 b_2 ... b_N
+   - Assign variables b_i with the bits of the data retrieved from hash
+     h_i, which may be constants or variables. The integer H is a system
+     constant, NUM_HASH_BITS.
+
+"PUT_BLOCK_BY_HASH" h_1 h_2 ... h_H "NUM_X" N "X" b_1 b_2 ... b_N
+   - Store the data with bits b_1 through b_N that may be constants or
+     variables and assign the hash to variables h_1 through h_H.
+
+"FREE_BLOCK_BY_HASH" h_1 h_2 ... h_H
+   - Forget about the block with hash h_1 through h_H.
+
+"DB_GET_BITS" i N b_1 b_2 ... b_N
+   - Read the N bit value at index i in the database and write the bits
+   to b_1 through b_N. 
+
+"DB_PUT_BITS" i N b_1 b_2 ... b_N
+   - Write the N bits b_1 through b_N to index i in the database.
+
+"DB_GET_SIBLING_HASH" i w "V"j
+   - Read the "sibling hash" of at index i with integer option w
+   and write the hash to variable "V"j through "V"(j + H - 1).
+
+"MATRIX_VEC_MUL" "NUM_ROWS" r "NUM_COLUMNS" c "IN_VEC" Vi ... V(i+c-1)
+"OUT_VEC" Vj ... V(j+r-1)
+   - Compute matrix vector multiplication between the built-in GGH
+     matrix stored in gghA.h and input vector denoted by (Vi, V(i+1), ..., V(i+c-1)).
+     The output vector is stored in variables (Vj, V(j+1), ...,
+     V(j+r-1)).
+
+"FAST_RAMGET" "ADDR" Vi "VALUE" V(i+1) "CONDITION" V(i+2)
+   - this is an exogenous constraint which gives hint to the prover
+     about how to fill the value of V(i+1).
+   - If V(i+2) is 1, V(i+1) will be the value at RAM[Vi], otherwise,
+     V(i+1) will be 0.
+   - timestamp is a constant value assigned at compilation time.
+
+"FAST_RAMPUT" "ADDR" Vi "VALUE" V(i+1) "CONDITION" V(i+2)
+   - this is an exogenous constraint which gives hint to the prover
+     about how to update the value at RAM location Vi.
+   - If V(i+2) is 1, RAM[Vi] will be updated with value Vi, otherwise,
+     RAM[Vi] will remain its previous value.
+     The condition bit exist to prevent side effect due to
+     non-executed IF branch.
+   - timestamp is a constant value assigned at compilation time.
+
+"BENES_NETWORK" "WIDTH" w "DEPTH" d "INPUT" Vi V(i+1)
+...  V(i+4*w-1) "INTERMEDIATE" "V"x "OUTPUT" "V"(x+4*w*(d-1)) "SWITCH"
+"V"(x+4*w*d)
+
+   - w and d are constant determined at compile time. w denotes the
+     number of input to the Benes network. It should be a power of 2.
+     d is actually determined by w. d should be 2*log(w)-1
+
+   - input consists of 4*w variables. Each 4 forms a group which
+     corresponds to one memory operation. (address, timestamp, type,
+     value)
+
+   - intermediate routing decisions are stored in variables Vx through
+     V(x+4*w*(d-1)-1) in a column major fashion.
+
+   - output are stored in variables V(x+4*w*(d-1)) through
+     V(x+4*w*d-1).
+
+   - switches are stored in variables V(x+4*w*d) through
+     V(x+4*w*d+d*w/2)
+
+   - Constraints that establish pairwise memory consistency are also
+     covered by this pseudo constraint.
+
+--------------------------- .qap ---------------------------------
+
+Each line in the <computation_name>.qap.matrix_{a,b,c} corresponds to
+a nonzero entry in the corresponding QAP matrix. E.g. if there is a
+line in a *.matrix_a file:
+
+96 5 2
+
+That means the entry at 96th row, 5th column is 2.
+
+Note: The rows and columns of a QAP matrix correspond to the variables
+and constraints of the constraint system, so the above example
+specifies the coefficient of the 96th variable in the 5th constraint
+of the R1CS.
+
+
+
+-------------- "basic constraints" format in compiler backend" ---
+  While never written to a file, the compiler backend represents
+  constraints as polynomials in the following format:
+(In Zaatar)
+  "(" linear1 ")" "*" "(" linear2 ")" "+" "(" linear3 ")"
+
+  Note that linear1, linear2, and linear3 may have parenthesized 
+  subexpressions, but they are individually linear polynomials.
+
+(In Ginger)
+  degree-2 polynomial
+
+  Again, the polynomial may have parenthesized subexpressions.
+

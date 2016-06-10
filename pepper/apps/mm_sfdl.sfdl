@@ -1,0 +1,26 @@
+/*
+ * Matrix multiplication of two mxm, rational matrices
+ */
+program matrixmult {
+  //Compiler is picky. First define your constants:
+  const m = 32;
+
+  //Now your type definitions:
+  type iterator = int; //The type of loop iterators is ignored
+  type Output = struct {int[m][m] Y};
+
+  //Now functions, in order they are called. 
+  function Output output (int<32>[m][m] Xa, int<32>[m][m] Xb){
+    var iterator i;
+    var iterator j;
+    var iterator k;
+    for (i = 0 to m-1) {
+      for (j = 0 to m-1) {
+        output.Y[i][j] = 0;
+        for(k = 0 to m-1) {
+          output.Y[i][j] = output.Y[i][j] + Xa[i][k] * Xb[k][j];
+        }
+      }
+    }
+  }
+}

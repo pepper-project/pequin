@@ -1,0 +1,107 @@
+/*
+ * Fannkuch benchmark.
+ * See http://shootout.alioth.debian.org for more info.
+ * This program takes one of m! permutations of the numbers of {1, ... m} 
+ * and, for each of the next 1000 lexicographically ordered permutations
+ * after that input permutation, 
+ * the maximum pancake flips are needed to make each permutation have a 
+ * 1 in its first position.
+ * 
+ * The code below assumes m <= 13, because the fannkuch numbers 
+ * for m <= 13 have been computed.
+ */
+program fannkuch {
+  //Constants
+  const m = 13;
+  const Fn = {0, 0, 1, 2, 4, 7, 10, 16, 22, 30, 38, 51, 65, 80};
+  const log2_m = 5;
+  const L = 10;
+
+  //types
+  type iterator = float; //The type of loop iterators is ignored
+  type Input = struct{int<log2_m>[m] a};
+  type Output = struct {int flips};
+
+  //main method, called "output"
+  function Output output (Input X){
+    var iterator i;
+    var iterator j;
+    var iterator k;
+    var iterator u;
+    var iterator iter;
+    var iterator flipNum;
+    var int[m] a;
+    var int[m] b;
+    var int flips;
+    var int winningK;
+    var int aWinningK;
+    var int winningU;
+    var int aWinningU;
+
+    output.flips = 0;
+
+    for(j = 0 to L-1){
+      a = X.a;  
+      b = a;
+      flips = 0;
+      for(i = 0 to Fn[m]-1) {
+        if (a[0] != 1){
+          flips = flips + 1;
+          for(flipNum = 2 to m) {
+            if (a[0] != flipNum){ 
+            } else {
+              for(j = 0 to flipNum-1){
+                b[j] = a[flipNum - 1 - j];
+              }
+            }
+          }
+          a = b;
+        }
+      }
+      if (flips > output.flips){
+        output.flips = flips;
+      }
+
+      //Advance X.a to the next lexographic permutation.
+      //Find the largest index k such that a[k] < a[k+1].
+      winningK = -1;
+      aWinningK = -1;
+      for(k = 0 to m-2){
+        if (X.a[k] < X.a[k+1]){
+          winningK = k;
+          aWinningK = X.a[k];
+        }
+      }
+      if (winningK != -1){
+        //Find the largest index u such that a[winningK] < a[u]. 
+        //Since k >= 0 and u > k, u >= 1.
+        for(u = 1 to m-1){
+          if (aWinningK < X.a[u]){
+            winningU = u;
+            aWinningU = X.a[u];
+          }
+        }	
+
+        //Swap a[k] and a[u]. 
+        for(i = 0 to m-1){
+          if (i == winningK){
+            X.a[i] = aWinningU;
+          }
+          if (i == winningU){
+            X.a[i] = aWinningK;
+          }
+        }
+
+        //Reverse the sequence a[k+1] up to a[m-1]
+        b = X.a;
+        for(i = 0 to m-1){
+          if (i == winningK){
+            for(u = i+1 to m-1){
+              X.a[u] = b[i+m-u]; //m-1-(u-(i+1)) = m-1-(u-i-1)
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,32 @@
+#
+# Makefile fragment for common code.
+# This is NOT a complete makefile;
+# you must run GNU make in the top-level directory
+# where the GNUmakefile is located.
+#
+
+OBJDIRS += storage 
+SRCDIR = . 
+
+MERKLE_SRCFILES := \
+  storage/hasher.cpp \
+  storage/ram_impl.cpp \
+  storage/kyoto_block_store.cpp \
+  storage/leveldb_block_store.cpp \
+  storage/configurable_block_store.cpp \
+  storage/null_hash.cpp \
+  storage/ggh_hash.cpp \
+  storage/exo.cpp \
+  storage/db_util.cpp \
+  storage/external_sort.cpp \
+  storage/db_block_store.cpp
+
+# Only build files if they exist.
+MERKLE_SRCFILES := $(wildcard $(MERKLE_SRCFILES))
+
+MERKLE_OBJFILES := $(patsubst %.cpp, $(OBJDIR)/%.o, $(MERKLE_SRCFILES))
+
+#$(OBJDIR)/libpepperstorage.a : $(MERKLE_OBJFILES)
+#	@echo + ar $@
+#	$(V)$(AR) $@ $^
+

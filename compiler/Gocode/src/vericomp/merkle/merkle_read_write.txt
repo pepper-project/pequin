@@ -1,0 +1,153 @@
+I. Setup and terminology
+
+Assume that the database that the server has is a vector of size n and
+is indexed from 0 to n-1 (assume for simplicity that n is a power of 2
+and let n = 2^l).
+
+The indices will be keys and the value at a particular index will be the
+entry in the array at that index.  Also, for simplicity of the
+description, assume that the hash function has the following signature.
+This assumption isn't fundamental, but this made to make the description
+of the constraints concise.
+
+  H: F^2 --> F
+
+i.e., H is a hash function that takes two field elements and turns them
+into a single field element. 
+
+We support two operations: get(r,k) that returns the value stored at
+index k in the database whose root of the Merkle tree is r, and
+put(r,k,v) stores v at index k in the database whose root of the Merkle
+tree is r and also returns a new root of the Merkle tree after updating
+the database.  Next, we present constraints for these operations that
+are satisfied if and only if the operations are executed correctly.
+
+II. Constraints for get(r,k):
+ 
+  Variables:
+    Designated input variables:
+
+      - Let K denote a designated input variable that the client will
+        bind to its input which is the key k.
+
+      - Let R denote a designated input variable that the client will
+        bind to the root of the Merkle tree that it is holding.
+
+    Designated output variables:
+
+      - Let Y denote a designated output variable that the client will
+        bind to the value that the server claims to be the value stored
+        at index k in the database.
+
+    Brief description of the purpose of the intermediate variables:
+      
+      - Z_1, ..., Z_l are the hashes that the server provides to show
+        that there exists a "hash path" from root, R, to the claimed
+        value with the path represented by k when one interprets the
+        path using the bitwise representation of k.
+
+      - S_1, ..., S_{l+1} are a set auxiliary variables that we will use
+        to check if we can recompute the root of the Merkle tree using
+        Z_1, ..., Z_l and Y.
+
+  Constraints:
+    
+    [Do a "bit blasting" of K to extract the bitwise representation of
+    K and also check if each B_i is either 0 or 1] 
+    
+      0 = K - \sum_{i=1}^{l} {2^{i-1} \cdot B_i}
+
+      0 = B_i - B_i \cdot B_i for all 1 <= i <= l
+
+
+    [Check that the last variable in S_1, ..., S_{l+1} is assigned
+    to the output claimed by the prover]
+    
+      0 = S_{l+1} - Y
+
+    [Recompute the path from the leaf node to the root of the Merkle
+    tree and use bits of K to guide the branch taken]
+
+      S_l = (1 - B_l) \cdot H(S_{l+1}, Z_{l}) + B_l \cdot H(Z_l, S_{l+1})
+
+      ...
+
+      S_1 = (1-B_1) \cdot H(S_2, Z_1) + B_1 \cdot H(Z_1, S_2)
+
+
+    [Check that S_1 actually holds the root of the Merkle tree] 
+      
+      0 = S_1 - R
+
+III. Constraints for put(r,k,v):
+
+  Variables:
+    Designated input variables:
+
+      - Let K denote a designated input variable that the client will
+        bind to its input which is the key k.
+
+      - Let R denote a designated input variable that the client will
+        bind to the root of the Merkle tree that it is holding.
+      
+      - Let V denote a designated input variable that the client will
+        bind to its input value v.
+
+    Designated output variables:
+
+      - Let Y denote a designated output variable that the client will
+        bind to the value that the server claims to be the new root of
+        the Merkle tree after storing v at key k. 
+        
+    Brief description of the purpose of the intermediate variables:
+      
+      - Z_1, ..., Z_{l} are the hashes that the server provides to
+        show that it knows the path labeled with the bits of k (i.e., a
+        bit 0 in k means "left branch" and a bit 1 in k means "right
+        branch").
+
+      - S_1, ..., S_{l+1} are a set variables used to recompute the
+        old root of the Merkle tree which is in variable R.
+
+      - T_1, ..., T_{l+1} are a set of auxiliary variables that we will
+        use to recompute the new root of the Merkle tree after storing V
+        at K.
+
+  Constraints:
+    
+    [Do a "bit blasting" of K to extract the bitwise representation of
+    K] 
+    
+      0 = K - \sum_{i=1}^{l} {2^{i-1} \cdot B_i}
+
+      0 = B_i - B_i \cdot B_i for all 1 <= i <= l
+
+
+    [Recompute the path from the leaf node to the root of the Merkle tree]
+      S_l = (1 - B_l) \cdot H(S_{l+1}, Z_{l}) + B_l \cdot H(Z_l, S_{l+1})
+
+      ...
+
+      S_1 = (1-B_1) \cdot H(S_2, Z_1) + B_1 \cdot H(Z_1, S_2)
+
+
+    [Check that S_1 actually holds the root of the Merkle tree] 
+      
+      0 = S_1 - R
+
+    [Compute the new root of the Merkle tree by "placing" the value in
+    the variable V at the Kth position in the database and by using the
+    old path that the server just gave us]
+
+      0 = V - T_{l+1} 
+      
+      T_l = (1 - B_l) \cdot H(T_{l+1}, Z_{l}) + B_l \cdot H(Z_l, T_{l+1})
+
+      ...
+
+      T_1 = (1-B_1) \cdot H(T_2, Z_1) + B_1 \cdot H(Z_1, T_2)
+
+    [Assign the new root of the Merkle tree to be Y so that the client
+    gets the new root of the Merkle tree as an output]
+
+      0 = T_1 - Y

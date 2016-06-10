@@ -1,0 +1,71 @@
+/*
+ * Floyd warshall all pairs shortest paths, running in Theta(m^3) time.
+ */
+program f_w_apsp {
+  //Constants
+  const m = 25;
+
+  const Infinity = 0x7FFFFFFF; //Maximum value of a 32bit signed int
+
+  //types
+  type dist_t = float<32,32>; //The type for weights and shortest path lengths
+  type iterator = float; //The type of loop iterators is ignored
+
+  //Input - a square matrix holding the weights of the directed edges of
+  //the graph. W[i][j] is the weight of edge (i,j), or Infinity if 
+  //the edge does not exist. The graph must not have any negative weight
+  //cycles.
+  type Input = struct{dist_t[m][m] W};
+
+  //Output - a square matrix holding the shortest path lengths between
+  //every pair of nodes in the graph. 
+  //We assume that the shortest path between any two nodes will have a
+  //length which fits in a 32 bit signed integer. (Otherwise the results of
+  //this computation are not defined.)
+  type Output = struct {dist_t[m][m] D};
+
+  //functions
+  function dist_t min(dist_t a, dist_t b){
+    if (a < b){
+      min = a;
+    } else {
+      min = b;
+    }
+  }
+
+  //main method, called "output"
+  function Output output (Input X){
+    var iterator i;
+    var iterator j;
+    var iterator k;
+    var dist_t[m][m] D;
+    var dist_t[m][m] Dnext;
+
+    //Initialize the matrix D to be the weights of the graph
+    D = X.W;
+
+    for(k = 0 to m-1) {
+      for(i = 0 to m-1) {
+        for(j = 0 to m-1) {
+          Dnext[i][j] = D[i][j];
+
+          //If D[i][k] and D[k][j] are both finite, then the path that goes
+          //from i -> k -> j is an option.
+
+          //Strictly speaking, it is possible for the shortest path between
+          //two nodes to exceed the bounds of 32 bit signed integers.
+          //However, we explicitly assumed that this does not occur in the
+          //problem statement - hence a reinterpret_cast here is valid.
+          if (D[i][k] != Infinity & D[k][j] != Infinity){   
+            Dnext[i][j] = min(
+                Dnext[i][j], 
+                reinterpret_cast(dist_t, D[i][k] + D[k][j]));
+          }
+        }
+      }
+      D = Dnext;
+    }
+
+    output.D = D;
+  }
+}

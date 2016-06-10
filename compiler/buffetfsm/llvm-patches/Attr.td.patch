@@ -1,0 +1,16 @@
+--- include/clang/Basic/Attr.td (revision 209914)
++++ include/clang/Basic/Attr.td (working copy)
+@@ -382,6 +382,13 @@
+   let Documentation = [Undocumented];
+ }
+ 
++def LoopFlatten : Attr {
++  let Spellings = [CXX11<"buffet","fsm">];
++  let Args = [IntArgument<"NumIters">];
++  let Documentation = [Undocumented];
++  let SemaHandler = 1;
++}
++
+ def ARMInterrupt : InheritableAttr, TargetSpecificAttr<TargetARM> {
+   // NOTE: If you add any additional spellings, MSP430Interrupt's spellings
+   // must match.

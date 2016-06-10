@@ -1,0 +1,80 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+<title>Beaver - a LALR Parser Generator</title>
+<link type="text/css" rel="stylesheet" href="doc.css"/>
+</head>
+<body>
+<h1 id="top">Beaver - a LALR Parser Generator</h1>
+<div id="nav">
+	<a href="index.html">Introduction</a>
+	<a href="how2run.html">How to Run It</a>
+	<a href="spec.html">Specification Syntax</a>
+	<div class="iln">Error Recovery</div>
+	<a href="scanners.html">Scanner API</a>
+	<a href="asts.html">Building ASTs</a>
+
+	<a href="http://sourceforge.net/projects/beaver" class="lss">SF Project</a>
+	<a href="http://sourceforge.net/project/showfiles.php?group_id=96950">Download</a>
+	<a href="http://sourceforge.net" class="lss"><img src="http://sourceforge.net/sflogo.php?group_id=96950&amp;type=1" width="88" height="31" alt="SourceForge.net"/></a>
+</div>
+<div id="ctx">
+<img id="bvr" src="beaver.png" alt="Beaver"/>
+<h2>Error Recovery</h2>
+
+<h3>Recovery Method</h3>
+
+<p>To recover from a syntax error Beaver's parsing engine uses simple token stream repairs and a phrase-level error recovery.
+</p>
+
+<h3>How It Works</h3>
+
+<p>Whenever parser detects a syntax error, in other words enconters an unexpected terminal symbol, it reports it by calling overridable <code>Events.syntaxError</code>
+method and then attempts to perform a simple token stream repair. First, it removes an unexpected terminal from the stream. If that was unsuccessful, it inserts before
+erroneous token one by one terminals that are expected in the current state. If that also has not helped, erroneous terminal is replaced by one that is expected by parser.
+After each attempt to repair a token stream parser performs a dry-run to check whether a repair will make further parsing possible. During dry-run no action code associated
+with production rules is executed, i.e. parser simulates a future parsing. If during this simulation it was able to shift successfully 3 terminals, stream is
+considered repaired and syntax error recovered. Otherwise parser continues by starting phrase-level error recovery.</p>
+
+<p>During phrase-level error recovery parser replaces some symbols around the erroneous terminal with <code>error</code> nonterminal and continues parsing. To find the
+start of the error phrase parser backtracks a little until it is finds a state where it is able to shift the <code>error</code> symbol. Symbols that were removed from
+the parsing stack by backtracking process match left context of the error phrase. These are removed and the <code>error</code> symbol is shifted. Now parser will try to
+match the right context of the error phrase. For this it attempts to parse ahead starting from the state with the <code>error</code> symbol on top of the parsing stack.
+Action routines are not executed during this "trial" parsing. While trying to parse ahead parser discards all terminals from the input stream that prevent successful
+parsing. These discarded terminals become a right context for the error phrase. The parsing ahead continues until parser is able to "shift" successfully 3 terminals or
+is able to reduce the grammar's goal. At this point parser considers syntax error recovered and returns to the regular parsing using those successfull terminals as the
+continuation of the input stream.
+</p>
+
+<h3>Important Facts</h3>
+
+<p>Expected tokens insertion and replacement during simple token stream repairs are performed only if parsing tables weren't compressed - only in that case they keep all
+lookahead terminals. Alternatively, for compressed parsing tables, an additional table that lists lookaheads for all states might be used. The latter is not implemented
+(yet?) though.
+</p>
+
+<p>If the grammar has not defined how to match error phrases, in other words <code>error</code> symbol was not used on a right-hand side of any production, parser
+won't be able to recover from the error. Therefore any syntax error will be the last error found, unless simple token stream repair recovered from a syntax error first.
+</p>
+
+<p>If parser cannot recover from a syntax error it raises <code>Parser.Exception</code>.
+</p>
+
+<p>The value of the error symbol is <code>null</code>. This fact is probably irrelevant, but in case if you try to access error symbol value though an alias in
+an action routine you'll need to know this.
+</p>
+
+<p>During backtracking parser will remove already reduced nonterminals from the parsing stack to find the left context of the error phrase. If action routines that were
+executed while those symbols were reduced do not have side-effects, i.e. they produced new value or a symbol, but have not changed anything else, then everything is fine.
+Shifted symbols will be discarded without any ill effects. Side-effects of action routines cannot be discarded, and further action routines of the generated parser may
+start behaving unpredictably.
+</p>
+
+<p>Another source of problems during parsing is a scanner inability to match a part of input to a known terminal. Scanners raise <code>Scanner.Exception</code> then, which
+parser catches and reports via overridable <code>scannerError</code> method. Parser will continue requesting tokens from a scanner until the latter returns a token. Therefore
+compliant scanners need to be able to return at least an end-of-file token after an exception was raised.
+</p>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,10 @@
+KEY,int,0,0,1
+Major,int,0,0,0
+LName,int,0,0,0
+State,int,0,0,0
+Age,int,0,0,0
+Class,int,0,0,0
+FName,int,0,0,0
+Credits,int,0,0,0
+Average,int,0,0,0
+PhoneNum,int,0,0,0

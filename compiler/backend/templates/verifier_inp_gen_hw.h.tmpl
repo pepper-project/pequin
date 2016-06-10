@@ -1,0 +1,27 @@
+\#ifndef APPS_SFDL_HW_V_INP_GEN_HW_H_
+\#define APPS_SFDL_HW_V_INP_GEN_HW_H_
+
+\#include <libv/libv.h>
+\#include <common/utility.h>
+\#include <${output_prefix}_v_inp_gen.h>
+\#include <${output_prefix}_cons.h>
+\#pragma pack(push)
+\#pragma pack(1)
+
+//using namespace ${computation_classname}_cons;
+
+/*
+* Provides the ability for user-defined input creation
+*/
+class ${computation_classname}VerifierInpGenHw : public InputCreator {
+  public:
+    ${computation_classname}VerifierInpGenHw(Venezia* v);
+
+    void create_input(mpq_t* input_q, int num_inputs);
+  private:
+    Venezia* v;
+    ${computation_classname}VerifierInpGen compiler_implementation;
+
+};
+\#pragma pack(pop)
+\#endif  // APPS_SFDL_HW_V_INP_GEN_HW_H_

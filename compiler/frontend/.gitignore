@@ -1,0 +1,7 @@
+.project
+.externalToolBuilders/*
+.classpath
+gensrc
+temp
+/bin
+/eclipse

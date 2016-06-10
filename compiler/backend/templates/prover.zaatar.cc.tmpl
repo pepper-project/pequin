@@ -1,0 +1,22 @@
+\#include <${output_prefix}_p.h>
+\#include <apps_sfdl_hw/${computation_classname}_p_exo.h>
+
+${computation_classname}Prover::${computation_classname}Prover(int ph,
+int b_size, int num_r, int in_size, int out_size, int num_v, int num_c,
+int size_aij, int size_bij, int size_cij, const char * file_name_qap,
+const char * file_name_f1_index, const char* _shared_bstore_file_name):
+ZComputationProver(ph, b_size, num_r, in_size, out_size, num_v, num_c,
+(char *) PROVER_NAME, size_aij, size_bij, size_cij,
+file_name_qap, file_name_f1_index, _shared_bstore_file_name)
+{
+exogenous_checker = new ${computation_classname}ProverExo();
+}
+
+${computation_classname}Prover::~${computation_classname}Prover()
+{
+delete exogenous_checker;
+}
+
+void ${computation_classname}Prover::interpret_constraints() {
+${computation}
+}

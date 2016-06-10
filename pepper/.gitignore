@@ -1,0 +1,7 @@
+bin/
+gen/
+pepper_prover
+pepper_verifier
+proving_material/
+verification_material/
+prover_verifier_shared/

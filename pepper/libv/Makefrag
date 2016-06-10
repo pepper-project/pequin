@@ -1,0 +1,18 @@
+#
+# Makefile fragment for common code.
+# This is NOT a complete makefile;
+# you must run GNU make in the top-level directory
+# where the GNUmakefile is located.
+#
+
+OBJDIRS += libv 
+SRCDIR = . 
+
+
+PROVER_SRCFILES := \
+  libv/computation_p.cpp \
+  libv/exogenous_checker.cpp
+
+PROVER_SRCFILES := $(wildcard $(PROVER_SRCFILES))
+PROVER_OBJFILES := $(patsubst %.cpp, $(OBJDIR)/%.o, $(PROVER_SRCFILES))
+

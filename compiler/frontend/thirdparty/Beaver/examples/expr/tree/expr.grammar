@@ -1,0 +1,31 @@
+%package "expr.tree";
+%import "expr.tree.ast.*";
+%class "ExpressionParser";
+
+%terminals NUMBER, MULT, DIV, PLUS, MINUS, LPAREN, RPAREN;
+
+%left  RPAREN;
+%right UNARY_MINUS;
+%left  MULT, DIV;
+%left  PLUS, MINUS;
+
+%typeof NUMBER = "Number";
+%typeof expr, pexpr = "Expr";
+
+%goal expr;
+
+
+expr
+	= expr.a MULT  expr.b           {: return new MultExpr (a, b); :}
+	| expr.a DIV   expr.b           {: return new DivExpr  (a, b); :}
+	| expr.a PLUS  expr.b           {: return new PlusExpr (a, b); :}
+	| expr.a MINUS expr.b           {: return new MinusExpr(a, b); :}
+	| MINUS expr.e @ UNARY_MINUS    {: return new NegExpr  (e);    :}
+	| NUMBER.n                      {: return new NumExpr  (n);    :}
+	| LPAREN pexpr.e RPAREN         {: return e;                   :}
+	;
+
+pexpr
+	= expr
+	| error                         {: return new ErrExpr();       :}
+    ;

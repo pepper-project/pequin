@@ -1,0 +1,12 @@
+#
+# Makefile fragment for common code.
+# This is NOT a complete makefile;
+# you must run GNU make in the top-level directory
+# where the GNUmakefile is located.
+#
+
+OBJDIRS += crypto 
+SRCDIR = . 
+
+CRYPTO_SRCFILES := crypto/prng.cpp
+CRYPTO_OBJFILES := $(patsubst %.cpp, $(OBJDIR)/%.o, $(CRYPTO_SRCFILES))

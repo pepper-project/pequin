@@ -1,0 +1,47 @@
+<project name="Expr" default="help">
+
+	<property file="../../build.properties"/>
+
+	<target name="jflextask" unless="jflex.available" description="creates JFlex Ant task">
+		<taskdef name="jflex" classname="JFlex.anttask.JFlexTask" classpath="${jflex_jar}"/>
+		<property name="jflex.available" value="yes"/>
+	</target>
+
+	<target name="beavertask" unless="beaver.available" description="creates Beaver Ant task">
+		<taskdef name="beaver" classname="beaver.comp.run.AntTask" classpath="../../../lib/beaver-ant.jar"/>
+		<property name="beaver.available" value="yes"/>
+	</target>
+
+	<target name="help" description="show help message">
+		<echo message="Ant build file for Calculator example. Useful targets:"/>
+		<echo message=""/>
+		<echo message="clean:  remove compiled files"/>
+		<echo message="make:   compiles the example"/>
+	</target>
+
+	<target name="scanner" depends="jflextask" description="generate scanner">
+		<jflex file="expr.flex" nobak="yes"/>
+	</target>
+
+	<target name="parser" depends="beavertask" description="generate parser">
+		<beaver file="expr.grammar" terminalNames="no"/>
+	</target>
+
+	<target name="compile" description="compile all classes">
+		<javac srcdir="." destdir="../.." includes="**/*.java" source="1.3" debug="${debug.info}" includeantruntime="false">
+			<classpath>
+				<pathelement path="../.."/>
+				<pathelement location="../../../lib/beaver-rt.jar"/>
+			</classpath>
+		</javac>
+	</target>
+
+	<target name="make" depends="scanner,parser,compile" description="makes the example"/>
+
+	<target name="clean" description="remove compiled files">
+		<delete>
+			<fileset dir="." includes="**/*.class,*.java,*.spec,*.*~" excludes="Calculator.java,Printer.java"/>
+		</delete>
+	</target>
+
+</project>

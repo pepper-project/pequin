@@ -1,0 +1,17 @@
+<project>
+
+    <target name="clean">
+        <delete dir="bin"/>
+    </target>
+
+    <target name="compile">
+    	<mkdir dir="bin"/>
+        <javac target="1.7"
+               debug="true"
+               destdir="bin"
+    		   srcdir="src;gensrc"
+    		   excludes="cql/**"
+    		   includeantruntime="false"/>
+    </target>
+
+</project>

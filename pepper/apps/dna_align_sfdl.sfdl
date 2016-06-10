@@ -1,0 +1,125 @@
+/*
+ * Computes the Longest Common Subsequence of two strings, one of 
+ * length m and the other of length n in O(m*n) time
+ */
+program lcs {
+  //Constants
+  const m = 300;
+  //n >= m
+  const n = 300;
+
+  //types
+  type iterator = float; //The type of loop iterators is ignored
+  type char = int<32>;
+  type Input = struct{char[m] A, char[n] B};
+
+  //If the LCS is shorter than n characters, the result will be terminated
+  //with the zero character, i.e. a C-style string is returned.
+  type Output = struct {char[n] LCS};
+
+  //functions
+  //Returns true iff. 0 <= i < a and 0 <= j < b
+  function boolean checkIndex2(int i, int j, int a, int b){
+    checkIndex2 = (0 <= i) & (i < a) & (0 <= j) & (j < b);
+  }
+
+  //main method, called "output"
+  function Output output (Input X){
+    var iterator i;
+    var iterator ir;
+    var iterator j;
+    var iterator jr;
+    var int[m] A;
+    var int[n] B;
+    //Dynamic programming memo
+    var int[m][n] LL;
+    //Hold choices made at each step, for use when backtracking
+    var int[m][n] choices; 
+    //Used when backtracking
+    var boolean inserted;
+    var int iPtr;
+    var int jPtr;
+    var int diag;
+    var int down;
+    var int right;
+    var char[m] LCS; //min(m,n) = m
+
+    A = X.A;
+    B = X.B;
+    //Go backwards from i = m-1 downto 0
+    for(ir = 0 to m-1){
+      i = m-1-ir;
+      for(jr = 0 to n-1){
+        j = n-1-jr;
+        if (A[i] == B[j]){
+          if (checkIndex2(i+1,j+1,m,n)){
+            diag = LL[i+1][j+1];
+          } else {
+            diag = 0;
+          }
+          //Diagonal jump
+          LL[i][j] = 1 + diag;
+          choices[i][j] = 0; 
+        } else {
+          if (checkIndex2(i+1,j,m,n)){
+            down = LL[i+1][j];
+          } else {
+            down = 0; 
+          }
+          if (checkIndex2(i,j+1,m,n)){
+            right = LL[i][j+1];
+          } else {
+            right = 0; 
+          }
+          //Assertion: down and right differ by at most 1
+          if (down == right + 1){
+            //Jump down
+            LL[i][j] = down;
+            choices[i][j] = 1;
+          } else {
+            //Jump right if down == right or right == down + 1.
+            LL[i][j] = right;
+            choices[i][j] = 2;
+          }
+        }
+      }
+    }
+
+    //Construct LCS, allowing it to have intermittent zero characters
+    iPtr = 0;
+    jPtr = 0; //Pointers to where in LL we are with respect to backtracking
+    for(i = 0 to m-1){
+      LCS[i] = 0; //If A[i] is not in the LCS, this remains 0.
+      for(j = 0 to n-1){
+        if ((i == iPtr) & (j == jPtr)){ //Loop until we meet up with the iPtr and jPtr
+          if (choices[i][j] == 0){ //we made a diagonal jump here
+            LCS[i] = A[i];
+            iPtr = iPtr + 1;
+            jPtr = jPtr + 1;
+          } else {
+            if (choices[i][j] == 1){//jump down
+              iPtr = iPtr + 1;
+            } else { //jump right
+              jPtr = jPtr + 1;
+            }
+          }
+        }
+      }
+    }
+
+    //Now move any string terminator (\0) characters in LCS to the end ala insertion sort
+    for(i = 1 to m-1){
+      inserted = false;
+      for(j = 0 to i-1){
+        if ((LCS[j] == 0) & !inserted){
+          //Swap LCS[j] and LCS[i].
+          LCS[j] = LCS[i];
+          LCS[i] = 0; 
+          inserted = true;
+        }
+      }
+    }
+
+    output.LCS = LCS;
+  }
+}

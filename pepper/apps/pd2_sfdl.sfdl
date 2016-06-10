@@ -1,0 +1,44 @@
+/*
+ *
+ * Evaluate a fixed degree 2 polynomial at a point in m-space 
+ */
+program pd2_sfdl {
+  //Compiler is picky. First define your constants:
+  const m = 512;
+
+  //Now your type definitions:
+  type iterator = float; //The type of loop iterators is ignored
+  type Output = struct {float Y};
+
+  function float poly(float[m] a){
+    var iterator i;
+    var iterator j;
+    var float f;
+    var float[m] subf;
+    f = 0;
+    for (i = 0 to m-1) {
+      f = f + FUNCTION_STATIC_RANDOM_INT(32)*(a[i]);
+    }
+
+    for (i = 0 to m-1) {
+      subf[i] = 0;
+      for (j = 0 to m-1) { 
+        subf[i] = subf[i] + FUNCTION_STATIC_RANDOM_INT(32)*a[i]*a[j];
+      }	
+      //f = f + subf;
+    }
+
+    for (i = 0 to m-1) {
+      f = f + subf[i];
+    }
+
+    poly = f;
+  }
+
+  //Now functions, in order they are called. 
+  function Output output (float<32,32>[m] X){
+    var float f;
+    f = poly(X);
+    output.Y = f;
+  }
+}

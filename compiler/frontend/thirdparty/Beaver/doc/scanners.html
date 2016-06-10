@@ -1,0 +1,63 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+<title>Beaver - a LALR Parser Generator</title>
+<link type="text/css" rel="stylesheet" href="doc.css"/>
+</head>
+<body>
+<h1 id="top">Beaver - a LALR Parser Generator</h1>
+<div id="nav">
+	<a href="index.html">Introduction</a>
+	<a href="how2run.html">How to Run It</a>
+	<a href="spec.html">Specification Syntax</a>
+	<a href="recovery.html">Error Recovery</a>
+	<div class="iln">Scanner API</div>
+	<a href="asts.html">Building ASTs</a>
+
+	<a href="http://sourceforge.net/projects/beaver" class="lss">SF Project</a>
+	<a href="http://sourceforge.net/project/showfiles.php?group_id=96950">Download</a>
+	<a href="http://sourceforge.net" class="lss"><img src="http://sourceforge.net/sflogo.php?group_id=96950&amp;type=1" width="88" height="31" alt="SourceForge.net"/></a>
+</div>
+<div id="ctx">
+<img id="bvr" src="beaver.png" alt="Beaver"/>
+<h2>Working With Scanners</h2>
+
+<h3>Scanner API</h3>
+
+<p>Beaver defines a simple interface that it expect scanners will follow in order to feed it with tokens. A compliant scanner extends <code>beaver.core.Scanner</code>
+class end behaves according to the "contract" defined by that base class:
+</p>
+<ul>
+<li>Scanner returns the next token it finds in the input when parser calls <code>nextToken</code> method.</li>
+<li>It is expected that there may be IO exceptions, and scanner may throw Scanner.Exception to highlight its own critical issues</li>
+<li>After the exception scanner should not break into pieces - parser will catch and report an exception and will keep calling <code>nextToken</code>, so in the end at
+least end-of-file token should be returned.</li>
+</ul>
+<p>Most scanner generators are flexible enough to be able to fulfill this contract. For example, this is how <a href="http://www.jflex.de">JFlex</a> specification may
+define a Beaver compliant scanner:
+</p>
+<pre>
+<i>import</i> beaver.Symbol;
+<i>import</i> beaver.Scanner;
+
+<i>import</i> example.ExampleParser.Terminals;
+
+<b>%%</b>
+
+<b>%class</b> LanguageScanner
+<b>%extends</b> Scanner
+<b>%function</b> nextToken
+<b>%type</b> Symbol
+<b>%yylexthrow</b> Scanner.Exception
+<b>%eofval{</b>
+	<i>return new</i> Symbol(Terminals.EOF, "end-of-file");
+<b>%eofval}</b>
+
+// ...
+
+<b>%%
+</pre>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,17 @@
+\#ifndef ${OUTPUT_PREFIX}_P_H_
+\#define ${OUTPUT_PREFIX}_P_H_
+
+\#include <libv/gcomputation_p.h>
+
+\#define PROVER_NAME "${computation_name}"
+    
+class ${computation_classname}Prover : public GComputationProver {
+  public:
+    ${computation_classname}Prover(int ph, int b_size, int num_r, int
+    in_size, int out_size, int num_v, int num_c, const char *file_name_f1_index);
+    
+    void create_gamma12(); 
+  
+    void interpret_constraints();
+};
+\#endif  // ${OUTPUT_PREFIX}_P_H_

@@ -1,0 +1,127 @@
+/*
+ * k-medoids clustering using Partitioning Around Medoids (PAM)
+ * k-medoids is more robust, but harder to compute than, k-means.
+ */
+program pam_clustering {
+  //Constants
+  const k = 2; //Number of clusters
+  const d = 5; //Dimensionality of datapoints
+  const m = 2; //Number of datapoints
+  const L = 3; //Number of times to run the swap phase (Each iteration tests (m-1)*k configurations)
+
+  //types
+  type iterator = int; //The type of loop iterators is ignored
+
+  //Input - An m by d matrix A, such that A[i][j] is the j-th coordinate 
+  //of the i-th datapoint
+  type Input = struct{int<32>[m][d] A};
+
+  //Output - A vector c of m elements, such that c[i] indicates which cluster,
+  //numbered 1 through k, datapoint i is in.
+  type Output = struct {int[m] c};
+
+  function int getDistance(int[d] a, int[d] b){
+    var int diff;
+    var iterator i;
+    //Squared euclidean distance
+    getDistance = 0;
+    for(i = 0 to d-1){
+      diff = a[i] - b[i];
+      getDistance = getDistance + diff * diff;
+    }
+  }
+
+  function int getPointCost(int[d] a, int[m][d] A){
+    var int cndPointCost;
+    var iterator i;
+
+    //the first k datapoints of A are the medoids.
+    getPointCost = getDistance(a, A[0]);
+    for(i = 1 to k-1){
+      cndPointCost = getDistance(a, A[i]);
+      if (cndPointCost < getPointCost){
+        getPointCost = cndPointCost;
+      }
+    }
+  }
+
+  function int getCost(int[m][d] A){
+    var int cost;
+    var iterator i;
+    cost = 0;
+    for(i = 0 to m-1){
+      cost = cost + getPointCost(A[i], A);
+    }
+    getCost = cost;
+  }
+
+  //main method, called "output"
+  function Output output (Input X){
+    var iterator i;
+    var iterator j;
+    var iterator u;
+    var iterator iter;
+    var int[m][d] A;
+    var int[m] c;
+    var int optDist; 
+    var int newDist;
+    var int newCost;
+    var int currentCost;
+    var int testDistance;
+    var int[d] backup;
+    var int[m] pointCosts;
+    var int[m] newPointCosts;
+
+    A = X.A;
+
+    //Randomly choose medoids 
+    //XXX - currently we just pick the first k datapoints as the medoids
+
+    //Convention: the medoids are the first k datapoints
+
+    //Initial cost
+    currentCost = getCost(A);
+
+    //Swap phase
+    for(iter = 0 to L-1) {
+      for(i = 0 to k-1){
+        //Overwrite medoid i with a nonmedoid point in the best way, 
+        //or leave it as is if no better point found
+        for(j = k to m-1){
+          //This is a possible medoid - nonmedoid swap.
+          //Compute the change in cost as a function of the swap
+          backup = A[i];
+          A[i] = A[j];
+          A[j] = backup;
+          newCost = getCost(A);
+
+          //Is it an improvement?
+          if (newCost < currentCost){
+            currentCost = newCost;
+          } else {
+            backup = A[i];
+            A[i] = A[j];
+            A[j] = backup;
+          }
+        }
+      }
+    }
+
+    //Classify points (Note - a medoid may end up in a different
+    //cluster than its own, if two medoids have the same coordinates)
+
+    for(i = 0 to m-1){
+      c[i] = 0;
+      optDist = getDistance(A[0], A[i]);
+      for(j = 1 to k-1){
+        newDist = getDistance(A[j], A[i]);
+        if (newDist < optDist){
+          optDist = newDist;
+          c[i] = j;
+        }
+      }
+    }
+
+    output.c = c;
+  }
+}

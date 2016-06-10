@@ -1,0 +1,75 @@
+\#include <${output_prefix}_p.h>
+\#include <${output_prefix}_v.h>
+\#include <common/handler.h>
+
+bool MICROBENCHMARKS = 0;
+
+// driver to run the phases of the verifier
+int main(int argc, char **argv)
+{
+  int batch_size;
+  int num_repetitions;
+  int num_inputs;
+  int num_outputs;
+  int num_cons;
+  int num_vars;
+  int num_aij, num_bij, num_cij;
+  char prover_url[BUFLEN];
+  char actor;
+  int phase;
+  int generate_states = 0;
+  char shared_bstore_file_name[BUFLEN];
+
+  parse_args(argc, argv, &actor, &phase, &batch_size, &num_repetitions, &num_inputs,
+    prover_url, &generate_states, shared_bstore_file_name);
+  int optimize_answers = 1;
+  
+  ${comp_parameters}
+
+  register_handler();
+
+\#ifdef INTERFACE_MPI
+
+  MPI_Init(&argc, &argv);
+  int rank;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+  if (rank == 0) {  // verifier
+    ${computation_classname}Verifier verifier(batch_size, num_repetitions,
+      optimize_answers, prover_url, num_inputs, num_outputs, num_vars,
+      num_cons, num_aij, num_bij, num_cij, file_name_qap, generate_states, shared_bstore_file_name);
+    verifier.begin_pepper();
+  } else {  // prover
+    ${computation_classname}Prover prover(0 /*phase*/, batch_size,
+    num_repetitions, num_inputs, num_outputs, num_vars, num_cons,
+    num_aij, num_bij, num_cij, file_name_qap, file_name_f1_index, shared_bstore_file_name);
+    prover.handle_requests();
+  }
+
+\#else
+  if (actor == 'v') {
+    ${computation_classname}Verifier verifier(batch_size, num_repetitions,
+      optimize_answers, prover_url, num_inputs, num_outputs, num_vars,
+      num_cons, num_aij, num_bij, num_cij, file_name_qap, generate_states, shared_bstore_file_name);
+    verifier.begin_pepper();
+  } else {
+    if (argc > 2) {
+      ${computation_classname}Prover prover(phase, batch_size,
+      num_repetitions, num_inputs, num_outputs, num_vars, num_cons,
+      num_aij, num_bij, num_cij, file_name_qap, file_name_f1_index, shared_bstore_file_name);
+      prover.handle_terminal_request();
+    }
+    else {
+      phase = 0;
+      batch_size = 100;
+      num_repetitions = 70;
+      num_inputs = 1000;
+
+      ${computation_classname}ProverExo prover(phase, batch_size, num_repetitions);
+      prover.handle_http_requests();
+    }
+  }
+\#endif
+
+  return 0;
+}

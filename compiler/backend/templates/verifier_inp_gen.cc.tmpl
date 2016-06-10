@@ -1,0 +1,22 @@
+\#include <${output_prefix}_v_inp_gen.h>
+\#include <${output_prefix}_cons.h>
+\#pragma pack(push)
+\#pragma pack(1)
+
+//This file will NOT be overwritten by the code generator, if it already
+//exists. make clean will also not remove this file.
+
+//using namespace ${computation_classname}_cons;
+
+${computation_classname}VerifierInpGen::${computation_classname}VerifierInpGen() {
+}
+
+//Refer to ${output_prefix}_cons.h for constants to use when generating input.
+void ${computation_classname}VerifierInpGen::create_input(mpq_t* input_q, int
+num_inputs) {
+\#if IS_REDUCER == 0
+${create_input}
+\#endif
+}
+
+\#pragma pack(pop)

@@ -1,0 +1,15 @@
+frontend/gensrc/*
+frontend/temp/*
+*.c
+*.defines
+tmptime
+*tmp*
+!*.tmpl
+*.circuit*
+*.spec
+*.cons
+*.c
+*.defines
+*.mem_consistency
+*.expanded
+frontend/bin/*

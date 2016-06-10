@@ -1,0 +1,19 @@
+\#include <${output_prefix}_v.h>
+\#include <apps_sfdl_hw/${computation_classname}_v_inp_gen_hw.h>
+
+${computation_classname}Verifier::${computation_classname}Verifier(int
+batch, int reps, int optimize_answers, char *prover_url, int in_size,
+int out_size, int num_v, int num_c, int size_aij, int size_bij, int
+size_cij, const char *file_name_qap, int generate_states, const char *_shared_bstore_file_name): ZComputationVerifier(batch, reps,
+in_size, out_size, num_v, num_c, optimize_answers, prover_url, (char *)
+NAME_PROVER, size_aij, size_bij, size_cij, file_name_qap)
+{
+  input_creator = new ${computation_classname}VerifierInpGenHw(v);
+  input_creator->set_generate_states(generate_states);
+  input_creator->set_block_store_name(_shared_bstore_file_name);
+}
+
+${computation_classname}Verifier::~${computation_classname}Verifier()
+{
+  delete input_creator;
+}

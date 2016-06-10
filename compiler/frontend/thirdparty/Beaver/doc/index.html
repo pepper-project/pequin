@@ -1,0 +1,82 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+<title>Beaver - a LALR Parser Generator</title>
+<link type="text/css" rel="stylesheet" href="doc.css"/>
+</head>
+<body>
+<h1 id="top">Beaver - a LALR Parser Generator</h1>
+<div id="nav">
+	<div class="iln">Introduction</div>
+	<a href="how2run.html">How to Run It</a>
+	<a href="spec.html">Specification Syntax</a>
+	<a href="recovery.html">Error Recovery</a>
+	<a href="scanners.html">Scanner API</a>
+	<a href="asts.html">Building ASTs</a>
+
+	<a href="http://sourceforge.net/projects/beaver" class="lss">SF Project</a>
+	<a href="http://sourceforge.net/project/showfiles.php?group_id=96950">Download</a>
+	<a href="http://sourceforge.net" class="lss"><img src="http://sourceforge.net/sflogo.php?group_id=96950&amp;type=1" width="88" height="31" alt="SourceForge.net"/></a>
+</div>
+<div id="ctx">
+<img id="bvr" src="beaver.png" alt="Beaver"/>
+<h2>Introduction</h2>
+
+<h3>What is Beaver</h3>
+
+<p>Beaver is a <a href="http://en.wikipedia.org/wiki/Look-ahead_LR_parser">LALR</a>(1) <a href="http://en.wikipedia.org/wiki/Compiler-compiler">parser generator</a>.
+It takes a <a href="http://en.wikipedia.org/wiki/Context-free_grammar">context free grammar</a> and converts it into a Java class that implements a
+<a href="http://en.wikipedia.org/wiki/Parser">parser</a> for the language described by the <a href="http://en.wikipedia.org/wiki/Grammar">grammar</a>.
+Beaver accepts grammars expressed in the <a href="http://en.wikipedia.org/wiki/Extended_Backus-Naur_form">Extended Backus-Naur form</a>(EBNF).
+</p>
+
+<h3>How Beaver Works</h3>
+
+<p>On the outside Beaver is not that different from any other parser generator. It reads the specification of the language for which a parser needs to be generated and
+produces a Java source file with a Java class that represents a parser for the language. It should be pointed out, though, that a
+<a href="http://en.wikipedia.org/wiki/Language">language</a> here should be viewed as a general term describing a linear form representing some structured information,
+not necessarily a programming language.
+</p>
+
+<p>The inner workings of Beaver's parsing engine use some interesting techniques which make it really fast, probably as fast as a LARL parser can get:
+</p>
+<ul>
+<li>Beaver parsing tables are built using a row displacement scheme, which produces tables that behave as if they are using perfect hashing. i.e. an action/state lookup
+is a single indexed access to an array.</li>
+<li>Action routines are invoked via delegates, which is the fastest way to invoke an action in Java, with the added benefit of having constant invocation
+time no matter how many action routines are defined. The latter advantage leads to significant gains (Java 1.2 parser with action routines do nothing
+but return symbols is about 26% faster when it uses delegates) over <code>switch</code>-ing for an action routine code.</li>
+</ul>
+
+<p>An option to use "switch"-ing for an action routine code is also available. Though it's slower, it does not suffer from the size overhead created by delegates (inner classes).
+When space is an issue or when the top speed is not a priority, generating a parser that <code>switch</code>-es between reduce action routines is a viable option.
+</p>
+
+<p>Beaver's compiler can be run from the command line or as an Ant task. It goes beyond that though, and provides a simple interface for starting it in other environments
+and by other means. This flexibility makes it easy to integrate Beaver with other applications and development tools.
+</p>
+
+<p>The parser that Beaver generates represents only a part of the translation process -- it performs a syntactic analysis and assembles input tokens into structures
+as described by the production rules of the language specification. Those tokens that Beaver consumes as its input need to be produced and supplied by a
+<a href="http://en.wikipedia.org/wiki/Scanner">scanner</a>. The API that Beaver provides for integration with scanners makes it easy to use with such popular tools as
+<a href="http://www.jflex.de">JFlex</a> and JLex.
+</p>
+
+<p>In order to run a Beaver-generated parser, the scanner and parser need to
+be generated and compiled, and the resultant "generated" parser needs to be
+run with the Beaver-supplied runtime parser engine.
+Your generated parser source code represents only parsing tables and action
+routines that drive the parsing and translation process.
+After these two items, parsing tables and runtime parsing engine, are combined
+at runtime, they become a working parser.
+</p>
+
+<p>Though it is possible to use a generated parser immediately as-is, typically a compiler writer will implement the real parser by extending the functionality which the generated parser
+provides.  Most significantly, the generated parsers report all problems with the input source through <code>System.err</code>.
+In order to modify the error handling behavior, a parser needs to
+override certain methods to intercept error events.
+</p>
+
+</div>
+</body>
+</html>

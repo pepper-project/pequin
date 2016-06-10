@@ -1,0 +1,19 @@
+\#ifndef ${OUTPUT_PREFIX}_V_INP_GEN_H_
+\#define ${OUTPUT_PREFIX}_V_INP_GEN_H_
+
+\#include <common/utility.h>
+\#include <libv/libv.h>
+\#include <libv/input_creator.h>
+
+/*
+* Compiler output implementation of create_input.
+*/
+class ${computation_classname}VerifierInpGen : public InputCreator {
+  public:
+    ${computation_classname}VerifierInpGen();
+
+    virtual void create_input(mpq_t* input_q, int num_inputs);
+
+    Venezia* v;
+};
+\#endif  // ${OUTPUT_PREFIX}_V_INP_GEN_H_

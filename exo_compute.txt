@@ -1,0 +1,54 @@
+This file provides some information on using exo_compute() in
+verifiable computations to inject arbitrary nondeterministic advice
+into the prover.
+
+You call exo_compute like any other C function, but the compiler
+treats it in a special way. When the prover is executing the
+computation and solving the constraints, it will execute a
+user-provided program as a child process. This program can accept any
+input from the prover and return any output.
+
+An example of exo_compute in action is in our reimplementation of the
+checking circuit for TinyRAM.
+    https://github.com/pepper-project/tinyram/blob/master/trVer/src/ver/trTransVer.c
+You will notice that the compute() function calls exo_compute twice,
+on lines 20 and 34.
+
+The prototype for exo_compute, were it actually a C function, would look
+something like this:
+    void exo_compute(field_t **inputs, int *lengths, field_t *output, int exo_number);
+(where field_t represents a field element).
+
+Some information about the arguments to exo_compute:
+
+  - inputs is an array of arrays, whose lengths are specified by the
+    corresponding entry in the lengths array.
+
+  - output is an array whose contents are set by the prover to the
+    output of the exogenous computation.
+
+  - exo_number tells the prover what executable to run. The number
+    is appended to the string "exo" (e.g., "exo0"), and the prover
+    will expect to find an executable of this name in the pepper/bin
+    directory.
+
+During execution, the prover will call exo<num> with one argument,
+the number values that the prover expects to be returned from the
+exo program on stdout. The prover provides, on stdin, all of the
+field elements specified by the inputs variable, where each array
+of values specified by the inputs variable is surrounded by [ ].
+
+Each input value is provided in Haskell-ish rational notation (e.g.,
+5%1 is 5). Outputs from the program should be in a format that's
+compatible with the libgmp function mpq_set_str().
+
+We have implementations of exo programs in (at least) three different
+languages:
+C:    https://github.com/pepper-project/tinyram/blob/master/trVer/src/mergesort/exo0.c
+Perl: https://github.com/pepper-project/tinyram/blob/master/trVer/src/sparse_matvec/exo0
+Java: https://github.com/pepper-project/tinyram/blob/master/trAsmProgs/src/tinyram/exo/TrExo.java
+
+If you want to see in more detail how the prover constructs the inputs
+and interprets the outputs, here's the code in the prover that actually
+handles exo_compute calls:
+    https://github.com/pepper-project/pepper/blob/master/pepper/libv/computation_p.cpp#L479-L614

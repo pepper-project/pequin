@@ -1,0 +1,142 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+<title>Beaver - a LALR Parser Generator</title>
+<link type="text/css" rel="stylesheet" href="doc.css"/>
+</head>
+<body>
+<h1 id="top">Beaver - a LALR Parser Generator</h1>
+<div id="nav">
+	<a href="index.html">Introduction</a>
+	<div class="iln">How to Run It</div>
+	<a href="spec.html">Specification Syntax</a>
+	<a href="recovery.html">Error Recovery</a>
+	<a href="scanners.html">Scanner API</a>
+	<a href="asts.html">Building ASTs</a>
+
+	<a href="http://sourceforge.net/projects/beaver" class="lss">SF Project</a>
+	<a href="http://sourceforge.net/project/showfiles.php?group_id=96950">Download</a>
+	<a href="http://sourceforge.net" class="lss"><img src="http://sourceforge.net/sflogo.php?group_id=96950&amp;type=1" width="88" height="31" alt="SourceForge.net"/></a>
+</div>
+<div id="ctx">
+<img id="bvr" src="beaver.png" alt="Beaver"/>
+<h2>How to Run Beaver's Compiler</h2>
+
+<h3><a name='args'></a>Command Line</h3>
+
+<p>To compile a grammar into a parser source code you run <code>beaver.jar</code> with a name of the file containing grammar specification and maybe some switches:
+</p>
+<pre>
+~$ java -jar beaver.jar [options] language.grammar
+</pre>
+<p>If compiler finds no mistakes in the specification and is able to build parsing tables it'll write the source code of the parser into a <code>.java</code> file.
+Depending on how far off the specification is from the expected semantics compiler may issue warnings,
+apply an automatic correction and still produce a parser. Though one needs to pay attention to the warnings as they may indicate that the selected path is not the one
+author had intended to use. If, on the other hand, errors are present in parts of the specification where no reasonable substitute can be applied or the grammar itself
+has problems, the compiler will print error messages and a parser will not be generated.
+</p>
+
+<p>Beaver compiler accepts several switches or options that control how a parser will be generated, or what additional information will be produced:
+</p>
+
+<dl class="opt">
+<dt>-a</dt>	<dd>produces additional <code>.stat</code> file that lists parser states and its actions, in other words - a readable form of parsing tables. This information
+can be handy to analyze why parser performs certain actions while parsing a source.</dd>
+
+<dt>-c</dt> <dd>suppresses compression of parsing tables. Quite often LALR parsers contain states where several lookaheads point to the same action - reduce a certain
+rule. These actions can be combined into one, which is executed if none of other lookaheads matches. Such compression makes parsing tables smaller, sometimes dramatically.
+Compression though brings up some issues - parser that uses compressed tables may reduce a rule even while seeing a wrong lookahead token. The issue will quickly be
+resolved by the parser not being able to ever shift the erroneous token, yet the syntax error will be reported after one or more incorrect reductions. This never happens if
+parsing tables aren't comressed - all misplaced tokens are immediately noticed and reported. Depending on the constraints of the compiler one may need to disable tables
+compression, which is enabled by default.</dd>
+
+<dt>-d &lt;dir&gt;</dt> <dd>Destination directory for generated files, which will be written to <code>destdir/grammar/package/name</code>. This behaviour is similar to 
+javac <code>-d</code>.</dd>
+
+<dt>-D</dt> <dd>dry-run - do not generate a parser.</dd>
+
+<dt>-e</dt> <dd>export serialized parsing tables into a <code>.spec</code> file. By default Beaver stores parsing tables in an encoded form in a parser class. This option
+instructs Beaver to save them in a file instead. Depending on your packaging preferences you may want the latter.</dd>
+
+<dt>-n</dt> <dd>generate non-anonymous delegates for action routines. Usually Beaver wraps action routines in anonymous inner classes. Some debuggers/IDEs are confused
+by anonymous inner classes and cannot find a source line if it is inside such a class. If this is your case, try this option.</dd>
+
+<dt>-s</dt> <dd>sorts terminals by name. Otherwise terminals are "sorted" by their IDs. Currently this is a purely easthetic option.</dd>
+
+<dt>-t</dt> <dd>generate terminal names. Beaver generates a nested Terminals class as an "enum" for terminals used by a grammar. If you need to use their names in error
+reports this option will instruct Beaver to create, in addition, a <code>NAMES</code> array with terminal names indexed by terminal IDs.</dd>
+
+<dt>-T</dt> <dd>dumps Terminals class (an "enum" really) to a separate file. Without this option Beaver generates a nested class for them inside a parser class.</dd>
+
+<dt>-w</dt> <dd>use <code>switch</code>-ing to invoke reduce action code. Normally Beaver generates delegates. If this option is used <b>-n</b> will be ignored.</dd>
+
+<dt>-v</dt> <dd>compiler prints version number and exits.</dd>
+</dl>
+
+<h3>Running with Ant</h3>
+
+<p>To compile grammars as part of a project build using Ant, an Ant task for the compiler needs to be declared:
+</p>
+<pre>
+&lt;<b>target</b> name=<i>"beavertask"</i> unless=<i>"beaver.available"</i> description=<i>"creates Beaver Ant task"</i>&gt;
+    &lt;<b>taskdef</b> name=<i>"<b>beaver</b>"</i> classname=<i>"beaver.comp.run.AntTask"</i> classpath=<i>"${java.libs.dir}/beaver.jar"</i>/&gt;
+    &lt;<b>property</b> name=<i>"beaver.available"</i> value=<i>"yes"</i>/&gt;
+&lt;/<b>target</b>&gt;
+</pre>
+<p>Once Ant picked up <code>beaver.jar</code> and created the task it can be used to compile grammars:
+</p>
+<pre>
+&lt;<b>target</b> name=<i>"parser"</i> depends=<i>"beavertask"</i> description=<i>"generate parser"</i>&gt;
+    &lt;<b>beaver</b> file             = <i>"language.grammar"</i>
+            destdir          = <i>"dir"</i>
+            compress         = <i>"yes"</i>
+            exportTables     = <i>"no"</i>
+            sortTerminals    = <i>"no"</i>
+            terminalNames    = <i>"no"</i>
+            exportTerminals  = <i>"no"</i>
+            useSwitch        = <i>"no"</i>
+            anonymousActions = <i>"yes"</i>
+            reportActions    = <i>"no"</i> /&gt;
+&lt;/<b>target</b>&gt;
+</pre>
+<p>This example uses all of the available task parameters with their default values.
+All of these attributes are optional, other than the "file".
+Ant task attributes have almost one-to-one correspondence with the command line
+arguments:
+</p>
+<table>
+<thead>
+<tr>
+<td>CLI option</td> <td>Ant task attribute</td> <td>Description</td>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>&nbsp;</td> <td>file="..."</td> <td>name of the source file (containing grammar)</td>
+</tr><tr class="hl">
+<td>-a</td> <td>reportActions="yes"</td> <td>Create .stat file</td>
+</tr><tr>
+<td>-c</td> <td>compress="no"</td> <td>Disable parsing tables compression</td>
+</tr><tr class="hl">
+<td>-d</td> <td>destdir="dir"</td> <td>Location to store generated files</td>
+</tr><tr>
+<td>-D</td> <td>&nbsp;</td> <td>Do not generate a parser</td>
+</tr><tr class="hl">
+<td>-e</td> <td>exportTables="yes"</td> <td>Put parsing tables in external file</td>
+</tr><tr>
+<td>-n</td> <td>anonymousActions="no"</td> <td>Generate named inner action classes</td>
+</tr><tr class="hl">
+<td>-s</td> <td>sortTerminals="yes"</td> <td>Sort terminals by name</td>
+</tr><tr>
+<td>-t</td> <td>terminalNames="yes"</td> <td>Generate terminal names</td>
+</tr><tr class="hl">
+<td>-T</td> <td>exportTerminals="yes"</td> <td>Create .java file for Terminals</td>
+</tr><tr>
+<td>-w</td> <td>useSwitch="yes"</td> <td>Use switch to select reduce code to run</td>
+</tr>
+</tbody>
+</table>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,19 @@
+\#ifndef ${OUTPUT_PREFIX}_V_H_
+\#define ${OUTPUT_PREFIX}_V_H_
+
+\#include <libv/zcomputation_v.h>
+
+\#define NAME_PROVER "${computation_name}"
+
+\#ifdef INTERFACE_MPI
+\#include <${output_prefix}_p.h>
+\#endif
+
+class ${computation_classname}Verifier : public ZComputationVerifier {
+  public:
+    ${computation_classname}Verifier(int batch, int reps, int
+    optimize_answers, char *prover_url, int in_size, int out_size, int
+    num_v, int num_c, int, int, int, const char*, int, const char*);
+    ~${computation_classname}Verifier();
+};
+#endif  // ${OUTPUT_PREFIX}_V_H_

@@ -1,0 +1,99 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+<title>Beaver - a LALR Parser Generator</title>
+<link type="text/css" rel="stylesheet" href="doc.css"/>
+</head>
+<body>
+<h1 id="top">Beaver - a LALR Parser Generator</h1>
+<div id="nav">
+	<a href="index.html">Introduction</a>
+	<a href="how2run.html">How to Run It</a>
+	<a href="spec.html">Specification Syntax</a>
+	<a href="recovery.html">Error Recovery</a>
+	<a href="scanners.html">Scanner API</a>
+	<div class="iln">Building ASTs</div>
+
+	<a href="http://sourceforge.net/projects/beaver" class="lss">SF Project</a>
+	<a href="http://sourceforge.net/project/showfiles.php?group_id=96950">Download</a>
+	<a href="http://sourceforge.net" class="lss"><img src="http://sourceforge.net/sflogo.php?group_id=96950&amp;type=1" width="88" height="31" alt="SourceForge.net"/></a>
+</div>
+<div id="ctx">
+<img id="bvr" src="beaver.png" alt="Beaver"/>
+<h2>Building ASTs</h2>
+
+<h3>Making Symbols</h3>
+
+<p>Action routines create and return <code>beaver.Symbol</code>s, which become directly accessible via symbol aliases. So, if the AST nodes descend from
+<code>beaver.Symbol</code> and fulfill nonterminal symbols' contract (they must call Symbol's protected default constructor), they - the nodes - can be
+created and returned directly by action routines. Once a node was returned by an action routine, parser shifts it on the stack and it becomes accessible as a
+symbol of some other production's right-hand side. Now that production action routine will be able to reference it and, in its turn, attach to the higher level
+node it creates.
+</p>
+
+<p>For example look at the following classes that define nodes for the AST of a simple expression:
+</p>
+<pre>
+Symbol
+    Node
+        Expr
+            NumExpr
+            BinExpr
+                MultExpr
+                DivExpr
+                PlusExpr
+                MinusExpr
+</pre>
+<p>The two interesting classes are <code>NumExpr</code> and <code>BinExpr</code>
+</p>
+<pre>
+public class NumExpr extends Expr {
+    public final int value;
+
+    public NumExpr(Number value) {
+        super(); // "I'm a nonterminal"
+        this.value = value.intValue();
+    }
+}
+
+public abstract class BinExpr extends Expr {
+    public final Expr l;
+    public final Expr r;
+
+    protected BinExpr(Expr left, Expr right) {
+        super(); // "I'm a nonterminal too"
+        l = left;
+        r = right;
+    }
+}
+</pre>
+<p>Having these AST classes in mind we can build a tree as part of the translation process like this:
+</p>
+<pre>
+%%
+
+%left RPAREN;
+%left MULT, DIV;
+%left PLUS, MINUS;
+
+%typeof NUMBER = "Number";
+%typeof expr = "Expr";
+
+%%
+
+expr = expr.a MULT  expr.b   {: return new MultExpr (a, b); :}
+     | expr.a DIV   expr.b   {: return new DivExpr  (a, b); :}
+     | expr.a PLUS  expr.b   {: return new PlusExpr (a, b); :}
+     | expr.a MINUS expr.b   {: return new MinusExpr(a, b); :}
+     | NUMBER.n              {: return new NumExpr  (n);    :}
+     | LPAREN expr.e RPAREN  {: return e; :}
+     ;
+</pre>
+<p>For further details take a look at <code>examples/expr/tree</code>, where this case is implemented, and which also shows the <code>TreeWalker</code> for this AST
+and how a simple stack based calculator is using the walker to actually do calculations. There is also another walker in the example that prints the tree and all the
+information it can get from the AST nodes.
+</p>
+
+</div>
+</body>
+</html>

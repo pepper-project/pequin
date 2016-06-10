@@ -1,0 +1,608 @@
+%package "ccomp.parser";
+%class "CParser";
+%import "ccomp.parser_hw.*";
+%import "SFE.Compiler.Operators.*";
+%import "static ccomp.parser_hw.HLL_ASTNodes.*";
+
+%init {:
+    report = new Parser.Events(){
+      public void scannerError(Scanner.Exception e)
+      {
+        throw new RuntimeException(e.getMessage());
+      }
+      public void syntaxError(Symbol e)
+      {
+      	if (e.value.equals("}")){
+        	throw new RuntimeException("Unexpected \""+e.value+"\". Remember: Variable declarations in structs must all end with semicolons. ");
+      	}
+        throw new RuntimeException("Unexpected \""+e.value+"\"");
+      }
+    };
+  :};
+
+%embed {:
+  private String placeholder_re = "Error: Parser reached placeholder implementation of parse tree action. ";
+  private String int_decimal = "int decimal"; 
+  private String int_octal = "int octal"; 
+  private String int_hex = "int hex"; 
+  
+  protected void recoverFromError(Symbol token, TokenStream in) throws java.io.IOException, Parser.Exception
+  {
+    throw new RuntimeException("Syntax error.");
+  }
+  :};
+
+%terminals 
+      
+IDENTIFIER,
+CONSTANT,HEX_CONSTANT,DECIMAL_CONSTANT,OCTAL_CONSTANT,FP_CONSTANT,
+
+STRING_LITERAL,SIZEOF,
+PTR_OP,INC_OP,DEC_OP,LEFT_OP,RIGHT_OP,LE_OP,GE_OP,EQ_OP,NE_OP,
+AND_OP,OR_OP,MUL_ASSIGN,DIV_ASSIGN,MOD_ASSIGN,ADD_ASSIGN,
+SUB_ASSIGN,LEFT_ASSIGN,RIGHT_ASSIGN,AND_ASSIGN,
+XOR_ASSIGN,OR_ASSIGN,TYPE_NAME,ASSIGN,
+
+TYPEDEF,EXTERN,STATIC,AUTO,REGISTER,
+CHAR,SHORT,INT,LONG,SIGNED,UNSIGNED,FLOAT,DOUBLE,CONST,VOLATILE,VOID,
+STRUCT,UNION,ENUM,ELLIPSIS,
+
+CASE,DEFAULT,IF,ELSE,SWITCH,WHILE,DO,FOR,GOTO,CONTINUE,BREAK,RETURN,
+
+LEFT_PAREN,RIGHT_PAREN,SEMICOLON,COLON,LEFT_SQBRACE,RIGHT_SQBRACE,PERIOD,COMMA,LEFT_CBRACE,RIGHT_CBRACE,
+AMPERSAND,PIPE,ASTERISK,CARET,ADD_OP,MINUS_OP,NOT_OP,NEG_OP,DIV_OP,MOD_OP,QUESTION,LEFT_ANGBRACE,RIGHT_ANGBRACE
+;            
+
+
+%goal translation_unit;
+
+%typeof IDENTIFIER = "String";
+%typeof TYPE_NAME = "String";
+%typeof CONSTANT = "String";
+%typeof HEX_CONSTANT = "String";
+%typeof OCTAL_CONSTANT = "String";
+%typeof DECIMAL_CONSTANT = "String";
+%typeof FP_CONSTANT = "String";
+%typeof STRING_LITERAL = "String";
+
+%typeof primary_expression = "Expression";
+%typeof postfix_expression = "Expression";
+%typeof argument_expression_list = "ArrayList<Expression>";
+%typeof unary_expression = "Expression";
+%typeof unary_operator = "Operator";
+%typeof cast_expression = "Expression";
+%typeof multiplicative_expression = "Expression";
+%typeof additive_expression = "Expression";
+%typeof shift_expression = "Expression";
+%typeof relational_expression = "Expression";
+%typeof equality_expression = "Expression";
+%typeof and_expression = "Expression";
+%typeof exclusive_or_expression = "Expression";
+%typeof inclusive_or_expression = "Expression";
+%typeof logical_and_expression = "Expression";
+%typeof logical_or_expression = "Expression";
+%typeof conditional_expression = "Expression";
+%typeof assignment_expression = "Expression";
+%typeof assignment_operator = "String";
+%typeof expression = "MultiExpression";
+%typeof constant_expression = "Expression";
+%typeof declaration = "Declaration";
+%typeof declaration_specifiers = "TypeSpecification";
+%typeof init_declarator_list = "ArrayList<AssignmentStatement>";
+%typeof init_declarator = "AssignmentStatement";
+%typeof storage_class_specifier = "TypeSpecification";
+%typeof type_specifier = "TypeSpecification";
+%typeof struct_or_union_specifier = "TypeSpecification";
+%typeof struct_or_union = "String";
+%typeof struct_declaration_list = "ArrayList<VariableDeclaration>";
+%typeof struct_declaration = "ArrayList<VariableDeclaration>";
+%typeof specifier_qualifier_list = "TypeSpecification";
+%typeof struct_declarator_list = "ArrayList<VariableDeclaration>";
+%typeof struct_declarator = "VariableDeclaration";
+//enum_specifier
+//enumerator_list
+//enumerator
+%typeof type_qualifier = "TypeSpecification";
+%typeof declarator = "Identifier";
+%typeof direct_declarator = "Identifier";
+%typeof pointer = "TypeSpecification";
+%typeof type_qualifier_list = "TypeSpecification";
+%typeof parameter_type_list = "ArrayList<VariableDeclaration>";
+%typeof parameter_list = "ArrayList<VariableDeclaration>";
+%typeof parameter_declaration = "VariableDeclaration";
+%typeof identifier_list = "ArrayList<Identifier>";
+%typeof type_name = "TypeSpecification";
+//abstract_declarator
+//direct_abstract_declarator
+%typeof initializer = "Expression";
+%typeof initializer_list = "ArrayList<Expression>";
+%typeof statement = "Statement";
+%typeof labeled_statement = "Statement";
+%typeof compound_statement = "Statement";
+%typeof declaration_list = "ArrayList<Declaration>";
+%typeof statement_list = "ArrayList<Statement>";
+%typeof expression_statement = "Statement";
+%typeof selection_statement = "Statement";
+%typeof iteration_statement = "Statement";
+%typeof jump_statement = "Statement";
+%typeof translation_unit = "Program";
+%typeof external_declaration = "Program";
+%typeof function_definition = "FunctionDefinition";
+
+primary_expression
+  = IDENTIFIER.a {: return new Symbol(new Identifier(a)); :}
+  | CONSTANT.a {: return new Symbol(new Constant(a,"???")); :}
+  | HEX_CONSTANT.a {: return new Symbol(new Constant(a,int_hex)); :}
+  | OCTAL_CONSTANT.a {: return new Symbol(new Constant(a,int_octal)); :}
+  | DECIMAL_CONSTANT.a {: return new Symbol(new Constant(a,int_decimal)); :}
+  | FP_CONSTANT.a {: return new Symbol(new Constant(a,"fp")); :}
+  | STRING_LITERAL.a {: return new Symbol(new Constant(a,"string")); :}
+  | LEFT_PAREN expression.a RIGHT_PAREN {: return new Symbol(a); :}
+  ;
+
+postfix_expression
+  = primary_expression.a {: return new Symbol(a); :} 
+  | postfix_expression.a LEFT_SQBRACE expression.b RIGHT_SQBRACE {:
+  	//Expand a[b] as *(a + b), so that symmetry is possible 
+  	return new Symbol(
+  		new UnaryOpExpression(new PointerAccessOperator(), 
+  			new BinaryOpExpression(a, new PlusOperator(), b))); 
+  	:}
+  | postfix_expression.a LEFT_PAREN RIGHT_PAREN {: return new Symbol(new FunctionCall((Identifier)a, new ArrayList())); :}
+  | postfix_expression.a LEFT_PAREN argument_expression_list.b RIGHT_PAREN {: return new Symbol(new FunctionCall((Identifier)a, b)); :} 
+  | postfix_expression.a PERIOD IDENTIFIER.b {: return new Symbol(new UnaryOpExpression(new StructAccessOperator(b), a)); :}
+  | postfix_expression.a PTR_OP IDENTIFIER.b {: return new Symbol(
+  	new UnaryOpExpression(new StructAccessOperator(b), 
+  			new UnaryOpExpression(new PointerAccessOperator(), a))); 
+  	:}
+  | postfix_expression.a INC_OP {: return new Symbol(
+  		new BinaryOpExpression(new AssignmentStatement(a, "+=", new Constant(1, int_decimal)), new MinusOperator(), new Constant(1, int_decimal))); 
+  	:}
+  | postfix_expression.a DEC_OP {: return new Symbol(
+  		new BinaryOpExpression(new AssignmentStatement(a, "-=", new Constant(1, int_decimal)), new PlusOperator(), new Constant(1, int_decimal)));
+  	:}
+  ;
+
+argument_expression_list
+  = assignment_expression.a {: ArrayList<Expression> s = new ArrayList(); s.add(a); return new Symbol(s); :}
+  | argument_expression_list.a COMMA assignment_expression.b {: a.add(b); return new Symbol(a); :}
+  ;
+
+unary_expression
+  = postfix_expression.a {: return new Symbol(a); :} 
+  | INC_OP unary_expression.a {: return new Symbol(
+  		new AssignmentStatement(a, "+=", new Constant(1, int_decimal)));
+  	:}
+  | DEC_OP unary_expression.a {: return new Symbol(
+  		new AssignmentStatement(a, "-=", new Constant(1, int_decimal)));
+  	:}
+  | unary_operator.a cast_expression.b {: return new Symbol(new UnaryOpExpression(a,b)); :}
+  | SIZEOF unary_expression {: throw new RuntimeException(placeholder_re); :}
+  | SIZEOF LEFT_PAREN type_name RIGHT_PAREN {: throw new RuntimeException(placeholder_re); :}
+  ;
+
+unary_operator
+  = AMPERSAND {: return new Symbol(new GetPointerOperator()); :}
+  | ASTERISK {: return new Symbol(new PointerAccessOperator()); :}
+  | ADD_OP {: return new Symbol(new UnaryPlusOperator()); :}
+  | MINUS_OP {: return new Symbol(new UnaryMinusOperator()); :}
+  | NEG_OP {: return new Symbol(new BitwiseNotOperator()); :}
+  | NOT_OP {: return new Symbol(new NotOperator()); :}
+  ;
+
+cast_expression
+  = unary_expression.a {: return new Symbol(a); :} 
+  | LEFT_PAREN type_name.a RIGHT_PAREN cast_expression.b {: return new Symbol(new CastExpression(a,b)); :}
+  ;
+
+multiplicative_expression
+  = cast_expression.a {: return new Symbol(a); :} 
+  | multiplicative_expression.a ASTERISK cast_expression.b {: return new Symbol(new BinaryOpExpression(a, new TimesOperator(), b)); :}
+  | multiplicative_expression.a DIV_OP cast_expression.b {: return new Symbol(new BinaryOpExpression(a, new DivisionOperator(DivisionOperator.QUOTIENT), b)); :}
+  | multiplicative_expression.a MOD_OP cast_expression.b {: return new Symbol(new BinaryOpExpression(a, new DivisionOperator(DivisionOperator.REMAINDER), b)); :}
+  ;
+
+additive_expression
+  = multiplicative_expression.a {: return new Symbol(a); :} 
+  | additive_expression.a ADD_OP multiplicative_expression.b {: return new Symbol(new BinaryOpExpression(a, new PlusOperator(), b)); :}
+  | additive_expression.a MINUS_OP multiplicative_expression.b {: return new Symbol(new BinaryOpExpression(a, new MinusOperator(), b)); :}
+  ;
+
+shift_expression
+  = additive_expression.a {: return new Symbol(a); :} 
+  | shift_expression.a LEFT_OP additive_expression.b {: return new Symbol(new BinaryOpExpression(a, new BitwiseShiftOperator(BitwiseShiftOperator.LEFT_SHIFT), b)); :}
+  | shift_expression.a RIGHT_OP additive_expression.b {: return new Symbol(new BinaryOpExpression(a, new BitwiseShiftOperator(BitwiseShiftOperator.RIGHT_SHIFT), b)); :}
+  ;
+
+relational_expression
+  = shift_expression.a {: return new Symbol(a); :} 
+  | relational_expression.a LEFT_ANGBRACE shift_expression.b {: return new Symbol(new BinaryOpExpression(a, new LessOperator(), b)); :}
+  | relational_expression.a RIGHT_ANGBRACE shift_expression.b {: return new Symbol(new BinaryOpExpression(a, new GreaterOperator(), b)); :}
+  | relational_expression.a LE_OP shift_expression.b {: return new Symbol(new BinaryOpExpression(a, new LessEqualOperator(), b)); :}
+  | relational_expression.a GE_OP shift_expression.b {: return new Symbol(new BinaryOpExpression(a, new GreaterEqualOperator(), b)); :}
+  ;
+
+equality_expression
+  = relational_expression.a {: return new Symbol(a); :} 
+  | equality_expression.a EQ_OP relational_expression.c {: return new Symbol(new BinaryOpExpression(a,new EqualOperator(),c)); :}
+  | equality_expression.a NE_OP relational_expression.c {: return new Symbol(new BinaryOpExpression(a,new NotEqualOperator(),c)); :}
+  ;
+
+and_expression
+  = equality_expression.a {: return new Symbol(a); :} 
+  | and_expression.a AMPERSAND.b equality_expression.c {: return new Symbol(new BinaryOpExpression(a,new BitwiseAndOperator(),c));:}
+  ;
+
+exclusive_or_expression
+  = and_expression.a {: return new Symbol(a); :} 
+  | exclusive_or_expression.a CARET.b and_expression.c {: return new Symbol(new BinaryOpExpression(a,new BitwiseXOROperator(),c)); :}
+  ;
+
+inclusive_or_expression
+  = exclusive_or_expression.a {: return new Symbol(a); :} 
+  | inclusive_or_expression.a PIPE.b exclusive_or_expression.c {: return new Symbol(new BinaryOpExpression(a,new BitwiseOrOperator(),c)); :}
+  ;
+
+logical_and_expression
+  = inclusive_or_expression.a {: return new Symbol(a); :} 
+  | logical_and_expression.a AND_OP.b inclusive_or_expression.c {: return new Symbol(new BinaryOpExpression(a,new AndOperator(),c)); :}
+  ;
+
+logical_or_expression
+  = logical_and_expression.a {: return new Symbol(a); :} 
+  | logical_or_expression.a OR_OP.b logical_and_expression.c {: return new Symbol(new BinaryOpExpression(a,new OrOperator(),c)); :}
+  ;
+
+conditional_expression
+  = logical_or_expression.a {: return new Symbol(a); :} 
+  | logical_or_expression.cond QUESTION expression.the COLON conditional_expression.els {: return new Symbol(new ConditionalExpression(cond,the,els)); :}
+  ;
+
+assignment_expression
+  = conditional_expression.a {: return new Symbol(a); :} 
+  | unary_expression.a assignment_operator.b assignment_expression.c {: return new Symbol(new AssignmentStatement(a,b,c)); :}
+  ;
+
+assignment_operator
+  = ASSIGN 
+  | MUL_ASSIGN 
+  | DIV_ASSIGN 
+  | MOD_ASSIGN 
+  | ADD_ASSIGN 
+  | SUB_ASSIGN 
+  | LEFT_ASSIGN 
+  | RIGHT_ASSIGN 
+  | AND_ASSIGN 
+  | XOR_ASSIGN 
+  | OR_ASSIGN 
+  ;
+
+expression
+  = assignment_expression.a {: MultiExpression s = new MultiExpression(); s.add(a); return new Symbol(s); :}
+  | expression.a COMMA assignment_expression.b {: a.add(b); return new Symbol(a); :}
+  ;
+
+constant_expression
+  = conditional_expression.a {: return new Symbol(a); :} //Not sure about this.
+  ;
+
+declaration
+  = declaration_specifiers.a SEMICOLON {: 
+    //This is like a typedef.
+	if (a instanceof StructTypeSpecification){
+		return new Symbol(a);
+	} else if (a.spec.startsWith("typedef ")){
+		return new Symbol(a);
+	}    
+	throw new RuntimeException("I don't know how to treat type "+a+" as a declaration.");
+    :}
+  | declaration_specifiers.a init_declarator_list.b SEMICOLON {:
+    //Build the list of assignments
+    MultiVariableDeclaration decls = new MultiVariableDeclaration(); 
+    for (AssignmentStatement c : b){
+      VariableDeclaration a2 = new VariableDeclaration(a, c);
+      decls.add(a2);
+    }
+    return new Symbol(decls);
+    :}
+  ;
+
+declaration_specifiers
+  = storage_class_specifier.b {: return new Symbol(b); :}
+  | storage_class_specifier.b declaration_specifiers.a {: b.appendTypeSpecification(a); return new Symbol(b); :}
+  | type_specifier.b {: return new Symbol(b); :}
+  | type_specifier.b declaration_specifiers.a {: b.appendTypeSpecification(a); return new Symbol(b); :}
+  | type_qualifier.b {: return new Symbol(b); :}
+  | type_qualifier.b declaration_specifiers.a {: b.appendTypeSpecification(a); return new Symbol(b); :}
+  ;
+
+init_declarator_list
+  = init_declarator.a {: ArrayList<AssignmentStatement> s = new ArrayList(); s.add(a); return new Symbol(s); :}
+  | init_declarator_list.a COMMA init_declarator.b {: a.add(b); return new Symbol(a); :}
+  ;
+
+init_declarator
+  = declarator.a {: return new Symbol(new AssignmentStatement(a,null)); :}
+  | declarator.a ASSIGN initializer.b {: return new Symbol(new AssignmentStatement(a,b)); :}
+  ;
+
+storage_class_specifier
+  = TYPEDEF {: return new Symbol(new TypeDefSpecification("typedef")); :}
+  | EXTERN {: return new Symbol(new TypeSpecification("extern")); :}
+  | STATIC {: return new Symbol(new TypeSpecification("static")); :}
+  | AUTO {: return new Symbol(new TypeSpecification("auto")); :}
+  | REGISTER {: return new Symbol(new TypeSpecification("register")); :}
+  ;
+
+type_specifier
+  = VOID  {: return new Symbol(new TypeSpecification("void")); :}
+  | CHAR {: return new Symbol(new TypeSpecification("char")); :}
+  | SHORT {: return new Symbol(new TypeSpecification("short")); :}
+  | INT {: return new Symbol(new TypeSpecification("int")); :}
+  | LONG {: return new Symbol(new TypeSpecification("long")); :}
+  | FLOAT {: return new Symbol(new TypeSpecification("float")); :}
+  | DOUBLE {: return new Symbol(new TypeSpecification("double")); :}
+  | SIGNED {: return new Symbol(new TypeSpecification("signed")); :}
+  | UNSIGNED {: return new Symbol(new TypeSpecification("unsigned")); :}
+  | struct_or_union_specifier.a {: return new Symbol(a); :}
+  | enum_specifier {: throw new RuntimeException(placeholder_re); :}
+  | TYPE_NAME.a {: return new Symbol(new TypeSpecification(a)); :}
+  ;
+
+struct_or_union_specifier
+  = struct_or_union.a IDENTIFIER.b LEFT_CBRACE struct_declaration_list.c RIGHT_CBRACE {: return new Symbol(new StructTypeSpecification(a, b, c)); :}
+  | struct_or_union.a LEFT_CBRACE struct_declaration_list.b RIGHT_CBRACE {: return new Symbol(new StructTypeSpecification(a, null, b)); :}
+  | struct_or_union.a IDENTIFIER.b {: return new Symbol(new TypeSpecification(a+" "+b)); :}
+  ;
+
+struct_or_union
+  = STRUCT {: return new Symbol("struct"); :}
+  | UNION {: throw new RuntimeException("Unions not yet supported"); :}
+  ;
+
+struct_declaration_list
+  = struct_declaration.a {: return new Symbol(a); :}
+  | struct_declaration_list.a struct_declaration.b {: a.addAll(b); return new Symbol(a); :}
+  ;
+
+struct_declaration
+  = specifier_qualifier_list.a struct_declarator_list.b SEMICOLON {: 
+    for(VariableDeclaration q : b){
+      q.setType(a);
+    }
+    return new Symbol(b);
+   :}
+  ;
+
+specifier_qualifier_list
+  = type_specifier.a specifier_qualifier_list.b {: a.appendTypeSpecification(b); return new Symbol(a); :}
+  | type_specifier.a {: return new Symbol(a); :}
+  ;
+
+struct_declarator_list
+  = struct_declarator.a {: ArrayList<VariableDeclaration> p = new ArrayList(); p.add(a); return new Symbol(p); :}
+  | struct_declarator_list.a COMMA struct_declarator.b {: a.add(b); return new Symbol(a); :}
+  ;
+
+struct_declarator
+  = declarator.a {: return new Symbol(new VariableDeclaration(a)); :}
+  | COLON constant_expression {: throw new RuntimeException("Anonymous fields in structs not supported."); :}
+  | declarator.a COLON constant_expression.b {: VariableDeclaration v = new VariableDeclaration(a); v.setInitializer(b); return new Symbol(v); :}
+  ;
+
+enum_specifier
+  = ENUM LEFT_CBRACE enumerator_list RIGHT_CBRACE {: throw new RuntimeException(placeholder_re); :}
+  | ENUM IDENTIFIER LEFT_CBRACE enumerator_list RIGHT_CBRACE {: throw new RuntimeException(placeholder_re); :}
+  | ENUM IDENTIFIER {: throw new RuntimeException(placeholder_re); :}
+  ;
+
+enumerator_list
+  = enumerator {: throw new RuntimeException(placeholder_re); :}
+  | enumerator_list COMMA enumerator {: throw new RuntimeException(placeholder_re); :}
+  ;
+
+enumerator
+  = IDENTIFIER {: throw new RuntimeException(placeholder_re); :}
+  | IDENTIFIER ASSIGN constant_expression {: throw new RuntimeException(placeholder_re); :}
+  ;
+
+type_qualifier
+  = CONST {: throw new RuntimeException(placeholder_re); :}
+  | VOLATILE {: throw new RuntimeException(placeholder_re); :}
+  ;
+
+declarator
+  = pointer.p direct_declarator.a {: a.setPointer(p); return new Symbol(a); :} 
+  | direct_declarator.a {: return new Symbol(a); :}
+  ;
+
+direct_declarator
+  = IDENTIFIER.a  {: return new Symbol(new Identifier(a)); :}
+  | LEFT_PAREN declarator RIGHT_PAREN {: throw new RuntimeException("I don't know how to parse ( declarator )."); :}
+  | direct_declarator.a LEFT_SQBRACE.b constant_expression.c RIGHT_SQBRACE.d {: a.addArrayDeclaration(c); return new Symbol(a); :}
+  | direct_declarator.a LEFT_SQBRACE.b RIGHT_SQBRACE.c {: throw new RuntimeException("I don't know how to parse declarator []."); :}
+  | direct_declarator.a LEFT_PAREN parameter_type_list.b RIGHT_PAREN {: a.setArgumentDeclarations(b); return new Symbol(a); :}
+  | direct_declarator.a LEFT_PAREN identifier_list.b RIGHT_PAREN {: a.setDefaultArgumentDeclarations(b); return new Symbol(a); :}
+  | direct_declarator.a LEFT_PAREN RIGHT_PAREN {: a.setArgumentDeclarations(new ArrayList()); return new Symbol(a); :}
+  ;
+
+pointer
+  = ASTERISK {: return new Symbol(new TypeSpecification("*")); :}
+  | ASTERISK type_qualifier_list.a {: TypeSpecification toRet = new TypeSpecification("*"); toRet.appendTypeSpecification(a); return new Symbol(toRet);:}
+  | ASTERISK pointer.a {: TypeSpecification toRet = new TypeSpecification("*"); toRet.appendTypeSpecification(a); return new Symbol(toRet); :}
+  | ASTERISK type_qualifier_list.a pointer.b {: TypeSpecification toRet = new TypeSpecification("*"); toRet.appendTypeSpecification(a); toRet.appendTypeSpecification(b); return new Symbol(toRet); :}
+  ;
+
+type_qualifier_list
+  = type_qualifier {: throw new RuntimeException(placeholder_re); :}
+  | type_qualifier_list type_qualifier {: throw new RuntimeException(placeholder_re); :}
+  ;
+
+
+parameter_type_list
+  = parameter_list.a {: return new Symbol(a); :}
+  | parameter_list COMMA ELLIPSIS {: throw new RuntimeException("I don't know how to parse parameter_list, ..."); :}
+  ;
+
+parameter_list
+  = parameter_declaration.a {: ArrayList<VariableDeclaration> toRet = new ArrayList(); toRet.add(a); return new Symbol(toRet); :}
+  | parameter_list.a COMMA parameter_declaration.b {: a.add(b); return new Symbol(a); :} 
+  ;
+
+parameter_declaration
+  = declaration_specifiers.a declarator.b {: return new Symbol(new VariableDeclaration(a,b)); :} 
+  | declaration_specifiers abstract_declarator {: throw new RuntimeException("I don't know how to parse declaration_specifiers abstract_declarator. "); :}
+  | declaration_specifiers.a {: return new Symbol(new VariableDeclaration(a)); :}
+  ;
+
+identifier_list
+  = IDENTIFIER.a {: ArrayList<Identifier> toRet = new ArrayList(); toRet.add(new Identifier(a)); return new Symbol(toRet); :}
+  | identifier_list.toRet COMMA IDENTIFIER.a {: toRet.add(new Identifier(a)); return new Symbol(toRet); :}
+  ;
+
+type_name
+  = specifier_qualifier_list.a {: return new Symbol(a); :}
+  | specifier_qualifier_list abstract_declarator {: throw new RuntimeException(placeholder_re); :}
+  ;
+
+abstract_declarator
+  = pointer {: throw new RuntimeException(placeholder_re); :}
+  | direct_abstract_declarator {: throw new RuntimeException(placeholder_re); :}
+  | pointer direct_abstract_declarator {: throw new RuntimeException(placeholder_re); :}
+  ;
+
+direct_abstract_declarator
+  = LEFT_PAREN abstract_declarator RIGHT_PAREN {: throw new RuntimeException(placeholder_re); :}
+  | LEFT_SQBRACE RIGHT_SQBRACE {: throw new RuntimeException(placeholder_re); :}
+  | LEFT_SQBRACE constant_expression RIGHT_SQBRACE {: throw new RuntimeException(placeholder_re); :}
+  | direct_abstract_declarator LEFT_SQBRACE RIGHT_SQBRACE {: throw new RuntimeException(placeholder_re); :}
+  | direct_abstract_declarator LEFT_SQBRACE constant_expression RIGHT_SQBRACE {: throw new RuntimeException(placeholder_re); :}
+  | LEFT_PAREN RIGHT_PAREN {: throw new RuntimeException(placeholder_re); :}
+  | LEFT_PAREN parameter_type_list RIGHT_PAREN {: throw new RuntimeException(placeholder_re); :}
+  | direct_abstract_declarator LEFT_PAREN RIGHT_PAREN {: throw new RuntimeException(placeholder_re); :}
+  | direct_abstract_declarator LEFT_PAREN parameter_type_list RIGHT_PAREN {: throw new RuntimeException(placeholder_re); :}
+  ;
+
+initializer
+  = assignment_expression.a {: return new Symbol(a); :} //Not sure about this.
+  | LEFT_CBRACE initializer_list.a RIGHT_CBRACE {: return new Symbol(new MultiExpression(a)); :}
+  | LEFT_CBRACE initializer_list.a COMMA RIGHT_CBRACE {: return new Symbol(new MultiExpression(a)); :}
+  ;
+
+initializer_list
+  = initializer.a {: ArrayList<Expression> s = new ArrayList(); s.add(a); return new Symbol(s); :}
+  | initializer_list.a COMMA initializer.b {: a.add(b); return new Symbol(a); :}
+  ;
+
+statement
+  = labeled_statement.a {: return new Symbol(a); :} 
+  | compound_statement.a {: return new Symbol(a); :}
+  | expression_statement.a {: return new Symbol(a); :}
+  | selection_statement.a {: return new Symbol(a); :}
+  | iteration_statement.a {: return new Symbol(a); :}
+  | jump_statement.a {: return new Symbol(a); :}
+  ;
+
+labeled_statement
+  = IDENTIFIER COLON statement {: throw new RuntimeException(placeholder_re); :}
+  | CASE constant_expression COLON statement {: throw new RuntimeException(placeholder_re); :}
+  | DEFAULT COLON statement {: throw new RuntimeException(placeholder_re); :}
+  ;
+
+compound_statement
+  = LEFT_CBRACE RIGHT_CBRACE {: return new Symbol(new CompoundStatement(new ArrayList(), new ArrayList())); :}
+  | LEFT_CBRACE statement_list.a RIGHT_CBRACE {: return new Symbol(new CompoundStatement(new ArrayList(), a)); :}
+  | LEFT_CBRACE declaration_list.a RIGHT_CBRACE {: return new Symbol(new CompoundStatement(a,new ArrayList())); :}
+  | LEFT_CBRACE declaration_list.a statement_list.b RIGHT_CBRACE {: return new Symbol(new CompoundStatement(a,b)); :}
+  ;
+
+declaration_list
+  = declaration.a {: ArrayList<Declaration> toRet = new ArrayList(); toRet.add(a); return new Symbol(toRet); :}
+  | declaration_list.a declaration.b {: a.add(b); return new Symbol(a); :}
+  ;
+
+statement_list
+  = statement.a {: ArrayList<Statement> toRet = new ArrayList(); toRet.add(a); return new Symbol(toRet); :} 
+  | statement_list.a statement.b {: a.add(b); return new Symbol(a); :}
+  ;
+
+expression_statement
+  = SEMICOLON {: return new Symbol(new CompoundStatement()); :}
+  | expression.a SEMICOLON {: return new Symbol((Statement)a); :} 
+  ;
+
+selection_statement
+  = IF LEFT_PAREN expression.cond RIGHT_PAREN statement.the {: return new Symbol(new IfStatement(cond, the, new CompoundStatement())); :}
+  | IF LEFT_PAREN expression.cond RIGHT_PAREN statement.the ELSE statement.els {: return new Symbol(new IfStatement(cond, the, els)); :}
+  | SWITCH LEFT_PAREN expression RIGHT_PAREN statement {: throw new RuntimeException(placeholder_re); :}
+  ;
+
+iteration_statement
+  = WHILE LEFT_PAREN expression.cond RIGHT_PAREN statement.block {:
+  	Expression cond2 = null;
+   	if (cond instanceof Expression){
+   		cond2 = (Expression)cond;
+   	} 
+  	return new Symbol(new LoopStatement(new CompoundStatement(), cond2, block, null));
+  :}
+  | DO statement.block WHILE LEFT_PAREN expression.cond RIGHT_PAREN SEMICOLON {:
+  	Expression cond2 = null;
+   	if (cond instanceof Expression){
+   		cond2 = (Expression)cond;
+   	} 
+  	return new Symbol(new LoopStatement(block, cond2, block, null));
+  :}
+  | FOR LEFT_PAREN expression_statement.pre expression_statement.cond RIGHT_PAREN statement.block {:
+  	Expression cond2 = null;
+   	if (cond instanceof Expression){
+   		cond2 = (Expression)cond;
+   	} 
+  	return new Symbol(new LoopStatement(pre, cond2, block, null));
+  :}
+  | FOR LEFT_PAREN expression_statement.pre expression_statement.cond expression.advance RIGHT_PAREN statement.block {:
+  	Expression cond2 = null;
+   	if (cond instanceof Expression){
+   		cond2 = (Expression)cond;
+   	} 
+  	return new Symbol(new LoopStatement(pre, cond2, block, advance));
+  :}
+  ;
+
+jump_statement
+  = GOTO IDENTIFIER SEMICOLON {: throw new RuntimeException("I don't know how to parse GOTO IDENTIFIER SEMICOLON."); :}
+  | CONTINUE SEMICOLON {: return new Symbol(new ContinueStatement()); :}
+  | BREAK SEMICOLON {: return new Symbol(new BreakStatement()); :}
+  | RETURN SEMICOLON {: return new Symbol(new ReturnStatement(null)); :} 
+  | RETURN expression.a SEMICOLON {: return new Symbol(new ReturnStatement(a)); :}
+  ;
+
+translation_unit
+  = external_declaration.a {: return new Symbol(a); :}
+  | translation_unit.a external_declaration.b {: a.addProgram(b); return new Symbol(a); :} 
+  ;
+
+external_declaration
+  = function_definition.a {: Program p = new Program(); p.add(a); return new Symbol(p); :}
+  | declaration.a {: 
+    Program p = new Program();
+    if (a instanceof MultiVariableDeclaration){
+      MultiVariableDeclaration d = (MultiVariableDeclaration)a;
+      for(VariableDeclaration v : d){ 
+        p.add(v);
+      } 
+    } else if (a instanceof StructTypeSpecification){
+      p.add((StructTypeSpecification)a);
+    } else {
+      throw new RuntimeException("I don't know how to interpret "+a+" as an external declaration");
+    }
+    return new Symbol(p); 
+    :}
+  ;
+
+function_definition
+  = declaration_specifiers declarator declaration_list compound_statement {: throw new RuntimeException("I don't know how to parse declaration_specifiers declarator declaration_list compound_statement."); :}
+  | declaration_specifiers.type declarator.nameAndArgs compound_statement.block {: return new Symbol(new FunctionDefinition(type,nameAndArgs,block)); :}
+  | declarator.nameAndArgs declaration_list.decls compound_statement.block {: Statement block2 = new CompoundStatement(decls, block); return new Symbol(new FunctionDefinition(nameAndArgs,block2)); :}
+  | declarator.nameAndArgs compound_statement.block {: System.err.println("Warning - defaulting to int return type on function "+nameAndArgs); return new Symbol(new FunctionDefinition(new TypeSpecification("int"),nameAndArgs,block)); :}
+  ;
+
