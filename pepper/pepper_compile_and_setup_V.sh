@@ -15,7 +15,7 @@
 # create random inputs by running
 # /bin/pepper_verifier_<computationname> gen_input. The input
 # generation can be overridden by the user by customizing the
-# appropriate file in apps_handwritten.
+# appropriate file in input_generation.
 if [ $# -ne 3 ] 
 then
     echo "usage: "$0 "<program name> <verification key file> <proving key file>"

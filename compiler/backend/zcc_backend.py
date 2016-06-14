@@ -36,7 +36,7 @@ VERIFIER_INP_GEN_HW_IMPL = "_v_inp_gen_hw.cpp"
 PROVER_EXO_HW_H = "_p_exo.h"
 PROVER_EXO_HW_IMPL = "_p_exo.cpp"
 
-# Go in apps_handwritten
+# Go in input_generation/ 
 VERIFIER_LITE_INP_GEN_H = "_v_inp_gen.h"
 
 
@@ -175,7 +175,7 @@ class CodeGenerator():
     # (VERIFIER_INP_GEN_HW_IMPL, VERIFIER_INP_GEN_HW_CC_TMPL)}
 
     for (targetfile, tmplfile) in protectedFiles:
-      filename = "apps_handwritten/" + self.class_name + targetfile;
+      filename = "input_generation/" + self.class_name + targetfile;
       try:
         filename_ = os.path.join(self.output_dir, filename)
         with file(filename_, 'r'):
