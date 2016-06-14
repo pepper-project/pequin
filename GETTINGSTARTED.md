@@ -1,6 +1,6 @@
 # Getting started with the Pepper project #
 
-This document gives a brief, high-level overview of the Pepper system. It
+This document gives an overview of the Pepper system. It
 assumes you've already installed the prerequisites; if you haven't, see
 README.md for a roadmap.
 
@@ -15,21 +15,32 @@ This repository has two main subdirectories:
 * `pepper` - This directory contains the back-end code, the driver scripts, and
   the source code that gets compiled by the front-end.
 
+## Summary ##
 
-## Anatomy of a Pepper execution ##
+1. Write your program, storing it in `apps/<program>.c`.
+
+2. Follow the steps in the tutorial below, running the compilation and setup
+   scripts for the prover and verifier, followed by input generation,
+   proving, and verification.
+
+3. (optional) Customize the input generation function in
+   `input_generation/` and recompile the verifier binary, using the
+   provided compilation script.
+
+## Tutorial and anatomy ##
 
 (In this section, unless otherwise specified, directories are relative to `pepper`.)
 
-The short version:
-
-* Our example is matrix multiplication. The source code is in
+* Our example is matrix multiplication, which is in 
   `apps/mm_pure_arith.c`.  Open this file in your favorite text editor
   and change value of`SIZE` on line 8 from 30 to 10 to make the
   execution faster. Then...
 
-* To compile a C program to constraints, build the verifier and prover
-  executables, and run the setup phase of the SNARK protocol, run the
-  following in the pepper directory:
+* Next, we want to compile a C program to constraints, build the
+  verifier and prover
+  executables, and run the setup phase of the probabilistic proof
+  protocol (which in this case is a SNARK, a kind of non-interactive
+  argument). To this end, run the following in the pepper directory:
 
 
 ```
@@ -73,20 +84,13 @@ The short version:
 
 ## Some more details ##
 
-The command line arguments to the setup scripts and prover/verifier
-executables are the filenames which will either be written to or read
-from depending on the phase of the protocol. Verifier-only files
-(namely, the verification key) will be stored in
-`verification_material`, prover-only files will be stored in
-`proving_material`, and shared files (computation I/O, proof) will be
-stored in `prover_verifier_shared`.
-
+Below, we detail each of the steps above.
 
 ### `apps/mm_pure_arith.c` ###
 
 This is the source code for the verified computation we wish to run. This
 code is compiled into a set of constraints, whose satisfying assignment
-is dettermined by the prover.
+is determined by the prover.
 
 A few things to note here:
 
@@ -101,63 +105,83 @@ A few things to note here:
 
 ### `pepper_compile_and_setup_{V,P}.sh` ###
 
-Each of these shell scripts first calls the C-to-constraints compiler,
-and then builds verifier and prover executables in the bin/
+* Each of these shell scripts first calls the C-to-constraints compiler,
+and then builds verifier and prover executables in the `bin/`
 directory. These exectuables are then run in `setup` mode.
 
-For the verifier, this means running the key generation algorithm,
-while for the prover, this is usually a no-op. The exception is for
+* For the verifier, this means running the key generation
+algorithm. Thus, the verifier setup script takes two arguments:
+filenames for the verification and proving keys, which are written to
+the `verification_material` and `proving_material` directories,
+respectively.
+
+* For the prover, setup is usually a no-op. The exception is for
 computations with remote storage - specifically, computations which
 make use of the Pantry `PutBlock` and `GetBlock` primitives. In this
 case the prover must initialize a database at setup time.
 
-### Input generator (`apps_handwritten/<computation>_v_inp_gen.h`) ###
+### Input generation (`input_generation/<computation>_v_inp_gen.h`) ###
 
-`_v_inp_gen.h` contains a computation-specific funtion which generates
-inputs to the computation, and is called by the verifier when running
-in input-generation mode. A default implementation which creates
-random inputs is generated from a template the first time the program
-is run, but it may be customized for more complicated input generation.
+* Before running the prover, you must create inputs to the computation
+of interest. This can be done either by running the verifier in "input
+generation" mode, or by creating an inputs file yourself. To run the
+verifier in input generation mode, type:
 
-The verifier writes the inputs returned by this function to a file
-name you specify in the `prover_verifier_shared/` directory. If would
-like to use inputs from another source, you can skip running the input
-generation phase of the verifier and create this file yourself.
+```
+  bin/pepper_verifier_<program> gen_input <input filename>
+```
 
-You will notice that the inputs are represented by an array, `input_q[]`,
+* Note that `<computation>_v_inp_gen.h` contains a computation-specific
+funtion which generates inputs to the computation, and is called by
+the verifier when running in input-generation mode. A default
+implementation which creates random inputs is generated from a
+template the first time the program is run, but it may be customized
+for more complicated input generation.
+
+* The verifier writes the inputs returned by this function to a file
+name you specify in the `prover_verifier_shared/` directory. If you
+would like to use inputs from another source, you can skip running the
+input generation phase of the verifier and create this file yourself.
+
+* You will notice that the inputs are represented by an array, `input_q[]`,
 while in `mm_pure_arith.c` they are represented by an arbitrary struct. The
 array corresponds to a "flattened" view of the struct in the order dictated
 by the struct's memory layout per the C standard.
 
+### Running the prover ###
+
+* To run a prover, type:
+
+```
+bin/pepper_prover_<program> prove <proving key filename> <input filename> <output filename> <proof filename>
+```
+
+ * The prover will look for (or create, in the case of outputs and
+ proofs) the filenames you specify in `proving_material` (for the
+ proving key), and `prover_verifier_shared` (for inputs, outputs and
+ proof).
+
+### Running the verifier ###
+
+ * To verify the results of a computation, type:
+
+```
+bin/pepper_verifier_<program> verify <verification key filename> <input filename> <output filename> <proof filename>
+```
+
+ * The verifier will look for the filenames you specify in
+`verification_material` (for the verification key), and
+`prover_verifier_shared` (for inputs, outputs, and proof).
+
 ### `bin/` ###
 
-In addition to the prover and verifiable executables, this directory
-contains the outputs of the C-to-constraints compiler, including
-representations of the constraints as a QAP, and a prover worksheet
-instructing the prover on how to solve these constraints. The format
-of these files is documented in fileformats.txt.
+ * In addition to the prover and verifiable executables, this
+directory contains the outputs of the C-to-constraints compiler,
+including a low-level representation of the constraints as a
+*quadratic arithmetic program* (QAP), and a prover worksheet
+instructing the prover on how to solve these constraints.
 
-
-## Creating a new computation ##
-
-So, what is the process when we wish to create a new program? Really, it's
-pretty simple:
-
-1. Write the program, storing it in `apps/<program>.c`.
-
-2. Run the compilation and setup scripts:
-   ```
-   ./pepper_compile_and_setup_V.sh <program> <verification key filename> <proving key filename>
-   ./pepper_compile_and_setup_P.sh <program>
-   ```
-3. (optional) Customize the input generation function in
-`apps_handwritten/` and recompile the verifier binary.
-
-4. `bin/pepper_verifier_<program> gen_input <input filename>` (or create your own inputs)
-
-5. ```bin/pepper_prover_<program> prove <proving key filename> <input filename> <output filename> <proof filename>```
-
-6. `bin/pepper_verifier_<program> verify <verification key filename> <input filename> <output filename> <proof filename>`
+* The format of these files is documented in fileformats.txt.
 
 ## Advanced features ##
 
@@ -170,30 +194,31 @@ a couple extra requirements for your program:
 
 * You need to tell the verifier to initialize the blockstore. For an
   example of how to do this, see
-  `apps_handwritten/ramput_micro_inp_gen.h` or
-  `apps_handwritten/ptrchase_merkle_inp_gen.h`.
+  `input_generation/ramput_micro_inp_gen.h` or
+  `input_generation/ptrchase_merkle_inp_gen.h`.
 
 ### Buffet ###
 
-If you want to run a computation with data-dependent loops, make sure
+ * If you want to run a computation with data-dependent loops, make sure
 to compile the llvm libraries needed for Buffet's C-to-C compiler
 first. (Run `install_buffet.sh`, or see `compiler/buffetsm/README.md`
 for more details.)
 
-After you build the libraries, the compiler will be built and invoked
+ * After you build the libraries, the compiler will be built and invoked
 automatically when compiling computations that include the
-[[buffet::fsm()]] compiler directive. See `apps/rle_decode_flat.c` for
+`[[buffet::fsm()]]` compiler directive. See `apps/rle_decode_flat.c` for
 an example.)
 
 
 ### `exo_compute()` ###
 
-`exo_compute()` is a function which may be used in verifiable
+* `exo_compute()` is a function which may be used in verifiable
 compuations to inject arbitrary advice into the prover. See
 exo_compute.txt for more information.
 
+## Examples ##
 
-* NOTE: Not all of the examples in `apps/` have been tested in this
+* Note, not all of the examples in `apps/` have been tested in this
   release.
 
 Known working ones include:

@@ -53,8 +53,7 @@ For more information on setting up dependencies (for example, for
 other distros), see [INSTALLING.md](INSTALLING.md) and [compiler/buffetfsm/README.md](compiler/buffetfsm/README.md).
 
 Once everything is set up, you're ready to run some verifiable
-computations! Please have a look at [GETTINGSTARTED.md](GETTINGSTARTED.md) for a quick
-overview of the process.
+computations! Please see [GETTINGSTARTED.md](GETTINGSTARTED.md) for an overview.
 
 This source code is released under a BSD-style license. See LICENSE
 for more details.
