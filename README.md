@@ -1,36 +1,55 @@
-# Pequin: tools for verifiable computation #
+# Pequin: An end-to-end toolchain for verifiable computation, SNARKs, and probabilistic proofs #
 
-This is a simplified release of (a subset of) the original [Pepper
-codebase](https://github.com/pepper-project/pepper).
+Pequin is a toolchain to *verifiably* execute programs expressed in (a
+large subset of) the C programming language. There are two parties: a
+*prover* and *verifier*. Using Pequin, the prover can convince the
+verifier that it executed a given computation according to the program
+expressed by the verifier. More generally, using Pequin, the prover can
+convince the verifier of the truth of some assertion, without the
+verifier having to manually check every line of the proof of that
+assertion.
 
-It includes a C compiler targeting *arithmetic constraints*, and an
-interface for running verifiable outsourced computations using
-*SNARKs* - succinct non-interactive arguments of knowledge, a
-cryptographic protocol which allows one to produce a proof that a
-computation was executed correctly.
+Pequin consists of a *front-end* and a *back-end*. The front-end takes C
+programs and transforms them to a set of *arithmetic constraints*, in
+such a way that the constraints are satisfiable if and only if the
+purported output (which will be produced by the prover, and which is
+represented by variables in the constraints) is what the original
+program would have produced. The back-end is a probabilistic proof
+protocol by which the prover convinces the verifier that the constraints
+are indeed satisfiable (if they are); if the constraints are not
+satisfiable, the verifier is not fooled, except with vanishingly low
+probability.
 
-The goal of this release is to make the Pepper compiler easier to use
-and compose with other work. Development is ongoing. Please feel free
-to open issues or submit pull requests!
-
-For more information on the related publications and the research
-effort in general, please visit the main [Pepper
-website.](http://www.pepper-project.org/)
-
-## What's new in this release ##
-
-The C-to-constraints compiler is relatively unchanged from the main
-release, but the multitude of backend verifiable computation protocols
-have been replaced with a few simple driver programs which read the
-outputs of the compiler and run the proving and verification
-algorithms using [SCIPR Lab's
+The specific back-end in Pequin is a *zk-SNARK* (zero-knowledge succinct
+non-interactive argument of knowledge). Pequin uses [SCIPR Lab's
 `libsnark`](https://github.com/scipr-lab/libsnark), which is an
-optimized implementation of
-the backend of [Pinocchio](http://research.microsoft.com/apps/pubs/default.aspx?id=180286),
-itself a refinement and implementation of [GGPR](http://eprint.iacr.org/2012/215).
+optimized implementation of the back-end of
+[Pinocchio](http://research.microsoft.com/apps/pubs/default.aspx?id=180286),
+itself a refinement and implementation of
+[GGPR](http://eprint.iacr.org/2012/215).
 
-Work to incorporate other protocols for verifiable computation and to
-improve documentation and usability of this codebase is ongoing.
+Pequin is a result of several years of research in the [Pepper
+project](http://www.pepper-project.org/), done at NYU and UT Austin.
+Pepper has brought to bear powerful techniques from
+complexity theory and cryptography: probabilistically checkable proofs
+(PCPs), efficient arguments, interactive proofs (IPs) etc.
+Pepper's research results include
+reducing the computational costs of a PCP-based efficient argument by
+over 20 orders of magnitude (in base 10!), and extending verifiability to
+representative uses of cloud computing (MapReduce jobs, simple
+database queries, computations involving private databases, etc.).
+These results and others are published in peer-reviewed scientific
+[papers](http://www.pepper-project.org/#publications).
+
+Pepper itself has [code](https://github.com/pepper-project/pepper);
+the goal of Pequin in particular is to be easier to use, and more composable. Development is ongoing. Please open issues or
+submit pull requests!  (This source code is released under a BSD-style
+license. See LICENSE for more details.)
+
+## What's coming next? ##
+
+* Incorporating other back-ends
+* Improving documentation and usability of this codebase is ongoing.
 
 ## Installation and first steps ##
 
@@ -53,12 +72,8 @@ For more information on setting up dependencies (for example, for
 other distros), see [INSTALLING.md](INSTALLING.md) and [compiler/buffetfsm/README.md](compiler/buffetfsm/README.md).
 
 Once everything is set up, you're ready to run some verifiable
-computations! Please see [GETTINGSTARTED.md](GETTINGSTARTED.md) for an overview.
-
-This source code is released under a BSD-style license. See LICENSE
-for more details.
+computations! Please see [GETTINGSTARTED.md](GETTINGSTARTED.md) for a quick overview of the process.
 
 ## Contact ##
 
-Please contact pepper@nyu.systems for any questions and comments.
-
+Please contact pepper@nyu.systems for any questions and comments. We are happy to work with you to adapt this technology into your application.
