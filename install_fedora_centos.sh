@@ -1,5 +1,5 @@
 #!/bin/bash
-
+set -e
 sudo yum groupinstall 'Development Tools'
 sudo yum install python python-devel java-1.8.0-openjdk-devel golang gcc   \
         gcc-c++ glibc-devel libstdc++ glibc-devel.i686 libstdc++.i686 ant \

@@ -1,5 +1,5 @@
 #!/bin/bash
-
+set -e
 cd compiler/buffetfsm/
 tar xjvf ../../thirdparty/llvm_clang-r209914-buffet_fsm_patch.tar.bz2
 mkdir toolchain
