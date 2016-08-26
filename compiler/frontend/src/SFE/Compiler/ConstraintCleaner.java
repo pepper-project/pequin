@@ -92,8 +92,11 @@ public class ConstraintCleaner {
       //Process constraints
       while ((line = bufferedReader.readLine()) != null) {
         //is this constraint one we are removing?
-        if (renameZaatar.matcher(line.replaceAll("\\s", "")).matches()) {
-          continue;
+        //Note that multiple output variables may be equal to a variable
+        //and in that case we only remove the constraint for one of them
+        Matcher match = renameZaatar.matcher(line.replaceAll("\\s", ""));
+        if (match.matches() && replacements.containsKey(match.group(1)) && replacements.get(match.group(1)).equals(match.group(2))){
+        	continue;
         }
 
         if (line.equals("END_CONSTRAINTS")) {
