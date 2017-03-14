@@ -76,4 +76,4 @@ computations! Please see [GETTINGSTARTED.md](GETTINGSTARTED.md) for a quick over
 
 ## Contact ##
 
-Please contact pepper@nyu.systems for any questions and comments. We are happy to work with you to adapt this technology into your application.
+Please contact pepper@pepper-project.org for any questions and comments. We are happy to work with you to adapt this technology into your application.
