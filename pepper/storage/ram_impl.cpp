@@ -3,7 +3,6 @@
 #include <sstream>
 #include <cassert>
 
-#include <crypto/prng.h>
 #include <storage/hash_block_store.h>
 #include <storage/ram_impl.h>
 

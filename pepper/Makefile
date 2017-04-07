@@ -9,7 +9,7 @@ IFLAGS = -I./include -I. -I$(DEPSDIR)/include -I$(DEPSDIR)/include/libsnark
 IFLAGS += -I$(DEPSDIR)/include
 
 LDFLAGS = -L$(DEPSDIR)/lib -lsnark -lgmp -lgmpxx
-LDFLAGS += -lchacha -lpapi -lrt -lleveldb -lkyotocabinet -Wl,-rpath,$(DEPSDIR)/lib/
+LDFLAGS += -lpapi -lrt -lleveldb -lkyotocabinet -Wl,-rpath,$(DEPSDIR)/lib/
 
 GENSRCDIR = gen
 BINDIR = bin
@@ -62,14 +62,12 @@ ZCC_CARGS += -fast-ram-address-width $(FAST_RAM_ADDRESS_WIDTH)
 ZCC_CARGS += -fast-ram-word-width $(FAST_RAM_WORD_WIDTH)
 
 include common/Makefrag
-include crypto/Makefrag
 include storage/Makefrag
 include include/Makefrag
 include libv/Makefrag
 
 COMMON_LIB_OBJFILES = \
 	$(COMMON_OBJFILES) \
-	$(CRYPTO_OBJFILES) \
 	$(LIBV_OBJFILES) \
 	$(MERKLE_OBJFILES) \
 	$(INCLUDE_OBJFILES) \

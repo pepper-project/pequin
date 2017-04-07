@@ -18,15 +18,7 @@ make
 make install
 cd $UP
 
-# chacha
-echo "installing chacha"
-$TAR chacha-fast.tar.gz
-cd chacha-fast
-make PREFIX=$DEPS_DIR
-make PREFIX=$DEPS_DIR install
-cd $UP
-
-# libconfig 
+# libconfig
 echo "installing libconfig"
 $TAR libconfig-1.4.8.tar.gz
 cd libconfig-1.4.8

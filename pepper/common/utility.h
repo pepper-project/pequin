@@ -2,7 +2,6 @@
 #define CODE_PEPPER_COMMON_UTILITY_H_  
 
 #include <string>
-#include <crypto/prng.h>
 #include <dirent.h>
 #include <iostream>
 #include <stdlib.h>
