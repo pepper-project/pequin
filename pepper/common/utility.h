@@ -73,9 +73,6 @@ using std::endl;
 
 
 
-extern "C" {
-#include "ecrypt-sync.h"
-}
 
 #define INTERFACE_MPI
 #define FOLDER_STATE_SHARED 1
@@ -253,7 +250,7 @@ inline void fast_mpz_realloc2(mpz_t m, int bits)
 
 // A faster version of mpz_import for our use on x86_64 bit platforms
 // Will not work if gmp uses nails
-inline void fast_mpz_import(mpz_t m, u8 * raw, int bytes)
+inline void fast_mpz_import(mpz_t m, uint8_t * raw, int bytes)
 {
   // Commented since this does not compile on Lonestar.
 
