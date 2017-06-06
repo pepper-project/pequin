@@ -59,6 +59,7 @@ cd $UP
 echo "installing libsnark"
 [ ! -d libsnark ] && git clone https://github.com/scipr-lab/libsnark.git
 cd libsnark
+git checkout 746ade7ce0f30a6f6e612e50450294c8e7ade9a4
 ./prepare-depends.sh
 make install STATIC=1 NO_PROCPS=1 PREFIX=$DEPS_DIR
 cd $UP
