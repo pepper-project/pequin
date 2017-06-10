@@ -1253,7 +1253,7 @@ void ComputationProver::compute_from_pws(const char* pws_filename) {
       expect_next_token(pws_file, "Y", "Invalid !=");
       next_token_or_error(pws_file, cmds);
       mpq_t& Y = voc(cmds, temp_q);
-      if (mpq_equal(X1, X2)) {
+      if (is_congruent(X1, X2)) {
         mpq_set_ui(M, 0, 1);
         mpq_set_ui(Y, 0, 1);
       } else {
@@ -1346,4 +1346,21 @@ void ComputationProver::compute_from_pws(const char* pws_filename) {
   convert_to_z(num_vars, F1, F1_q, prime);
   
 
+}
+
+bool ComputationProver::is_congruent(mpq_t a, mpq_t b) {
+
+    mpz_t a_z, b_z;
+    mpz_init(a_z);
+    mpz_init(b_z);
+    
+    convert_to_z(a_z, a, prime);
+    convert_to_z(b_z, b, prime);
+
+    bool is_congruent = (mpz_cmp(a_z, b_z) == 0);
+
+
+    mpz_clear(a_z), mpz_clear(b_z);
+
+    return is_congruent;
 }
