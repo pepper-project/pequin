@@ -71,7 +71,6 @@ protected:
 
     void compute_genericget(FILE* pws_file);
     void compute_printf(FILE* pws_file);
-    bool is_congruent(mpq_t a, mpq_t b);
 
   public:
 
