@@ -28,7 +28,7 @@ protected:
     mpz_t temp, temp2;
     mpz_t prime;
     mpz_t *input_output;
-    mpq_t *input_q, *output_q, *input_output_q, *temp_qs, *F1_q;
+    mpq_t *input_q, *output_q, *temp_qs, *F1_q;
     mpq_t temp_q, temp_q2, temp_q3;
     int size_input, size_output, size_f1_vec;
     
@@ -81,6 +81,7 @@ protected:
     void compute_from_pws(const char* pws_filename);
 
     mpz_t *input, *output, *F1;
+    mpq_t *input_output_q;
 };
 
 #endif  // CODE_PEPPER_LIBV_COMPUTATION_P_H_

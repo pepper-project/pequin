@@ -3,6 +3,8 @@
 
 #include <gmp.h>
 
+#include <common/utility.h>
+
 #include <libsnark/relations/constraint_satisfaction_problems/r1cs/r1cs.hpp>
 #include <libsnark/common/default_types/ec_pp.hpp>
 #include <libsnark/zk_proof_systems/ppzksnark/r1cs_ppzksnark/r1cs_ppzksnark.hpp>
@@ -169,7 +171,7 @@ void run_setup(int num_constraints, int num_inputs,
 }
 
 void verify (string verification_key_fn, string inputs_fn, string outputs_fn,
-             string proof_fn, int num_inputs, int num_outputs) {
+             string proof_fn, int num_inputs, int num_outputs, mpz_t prime) {
 
     libsnark::bn128_pp::init_public_params();
    
@@ -191,19 +193,25 @@ void verify (string verification_key_fn, string inputs_fn, string outputs_fn,
     std::cout << "loading outputs from file: " << outputs_fn << std::endl;
     std::ifstream outputs_file(outputs_fn);
 
-   
+    mpq_t tmp; mpq_init(tmp);
+    mpz_t tmp_z; mpz_init(tmp_z);
+    
     for (int i = 0; i < num_inputs; i++) {
-        FieldT currentVar;
-        inputs_file >> currentVar;
+        inputs_file >> tmp;
+        convert_to_z(tmp_z, tmp, prime);
+        FieldT currentVar(tmp_z);
         inputvec.push_back(currentVar);
     }
 
     for (int i = 0; i < num_outputs; i++) {
-        FieldT currentVar;
-        outputs_file >> currentVar;
-        inputvec.push_back(currentVar);
+        outputs_file >> tmp;
+        convert_to_z(tmp_z, tmp, prime);
+        FieldT currentVar(tmp_z);
+        inputvec.push_back(currentVar); 
     }
 
+    mpq_clear(tmp); mpz_clear(tmp_z);
+    
     inputs_file.close();
     outputs_file.close();
 
@@ -260,23 +268,18 @@ int main (int argc, char* argv[]) {
         std::cout << "Generating inputs, will write to " << input_filename << std::endl;
 
         mpq_t * input_q;
-        mpz_t * input_z;
         alloc_init_vec(&input_q, p.n_inputs);
-        alloc_init_vec(&input_z, p.n_inputs);
 
         gen_input(input_q, p.n_inputs);
-
-        convert_to_z(p.n_inputs, input_z, input_q, prime);
 
         std::ofstream inputs_file(input_filename);
         
         for (int i = 0; i < p.n_inputs; i++) {
-            inputs_file << input_z[i] << std::endl;
+            inputs_file << input_q[i] << std::endl;
         }
         inputs_file.close();
 
         clear_del_vec(input_q, p.n_inputs);
-        clear_del_vec(input_z, p.n_inputs);
     }
     else if(!strcmp(argv[1], "verify")) {
         if(argc != 6) {
@@ -287,7 +290,7 @@ int main (int argc, char* argv[]) {
         std::string inputs_fn = std::string(shared_dir) + argv[3];
         std::string outputs_fn = std::string(shared_dir) + argv[4];
         std::string proof_fn = std::string(shared_dir) + argv[5];
-        verify(verification_key_fn, inputs_fn, outputs_fn, proof_fn, p.n_inputs, p.n_outputs);
+        verify(verification_key_fn, inputs_fn, outputs_fn, proof_fn, p.n_inputs, p.n_outputs, prime);
     }
     else {
         print_usage(argv);

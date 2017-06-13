@@ -70,15 +70,17 @@ int main (int argc, char* argv[]) {
     pkey >> keypair.pk;
     libsnark::r1cs_ppzksnark_primary_input<libsnark::bn128_pp> primary_input;
     libsnark::r1cs_ppzksnark_auxiliary_input<libsnark::bn128_pp> aux_input;
-    
+
     for (int i = 0; i < p.n_inputs; i++) {
         FieldT currentVar(prover.input[i]);
         primary_input.push_back(currentVar);
     }
+
     for (int i = 0; i < p.n_outputs; i++) {
         FieldT currentVar(prover.output[i]);
         primary_input.push_back(currentVar);
     }
+
     for (int i = 0; i < p.n_vars; i++) {
         FieldT currentVar(prover.F1[i]);
         aux_input.push_back(currentVar);
@@ -93,7 +95,7 @@ int main (int argc, char* argv[]) {
 
     std::ofstream output_file(output_fn);
     for (int i = 0; i < p.n_outputs; i++) {
-        output_file << prover.input[i+p.n_inputs] << std::endl;
+        output_file << prover.input_output_q[p.n_inputs + i] << std::endl;
     }
     output_file.close();
 
