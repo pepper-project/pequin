@@ -185,6 +185,35 @@ instructing the prover on how to solve these constraints.
 
 ## Advanced features ##
 
+### Private prover input ###
+
+Pepper allows the prover to take inputs which are hidden from the
+verifier.
+
+There are actually a couple of ways to do this. The most general is
+using the exo_compute function in your verifiable computation. You
+call it like any other C function, but the compiler treats it
+specially: when the prover is executing the program and solving the
+constraints, it will execute a user-provided program as a child
+process. This program can accept any input from the prover and return
+any output.
+
+As a simple example, if you just want to have the prover take a fixed
+private key of some kind, the user-provided program can be a shell
+script that takes no input and echoes the data you want the prover to
+have.
+
+See `exo_compute.txt` for more information.
+
+Another option is using the commitment primitives (`hashget()` and
+`commitmentget()`), which allow the prover to provide the verifier
+with a commitment to some private state. This allows for more
+fine-grained control over what the prover's private inputs are allowed
+to be, but it does come with additional
+costs. https://eprint.iacr.org/2013/356.pdf, Section 6 provides the
+theoretical details. See `apps/genome_snp_freq.c` or `apps/tolling.c`
+for code examples.
+
 ### Pantry ###
 
 If you are using the Pantry `PutBlock` and `GetBlock` primitives, there are
@@ -208,13 +237,6 @@ for more details.)
 automatically when compiling computations that include the
 `[[buffet::fsm()]]` compiler directive. See `apps/rle_decode_flat.c` for
 an example.)
-
-
-### `exo_compute()` ###
-
-* `exo_compute()` is a function which may be used in verifiable
-compuations to inject arbitrary advice into the prover. See
-exo_compute.txt for more information.
 
 ## Examples ##
 
