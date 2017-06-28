@@ -53,17 +53,17 @@ to the black box given to customers.
 typedef uint32_t cost_t;
 typedef uint16_t toll_booth_id_t;
 
-struct tuple {
+struct t_tuple {
   int32_t time;
   toll_booth_id_t toll_booth_id;
   cost_t toll;
 };
 
-typedef struct tuple tuple_t;
+typedef struct t_tuple t_tuple_t;
 
 //Testing purposes
 //We assume no car drives through more than 50 toll booths in a month
-const int MAX_TUPLES = 512;
+const int MAX_TUPLES = 16;
 
 //At the end of the month, the client should fabricate tolls to toll
 //booth id 0 with cost 0.
@@ -73,7 +73,7 @@ const int MAX_TUPLES = 512;
 const int MAX_SPOTCHECKS = 5;
 
 typedef struct VerifierSideIn {
-  tuple_t spotchecks[MAX_SPOTCHECKS];
+  t_tuple_t spotchecks[MAX_SPOTCHECKS];
   //If a tuple exists with correct toll booth id and time differing
   //by at most time_threshold, then accept.
   int32_t time_threshold;
@@ -92,5 +92,5 @@ struct Out {
 };
 
 struct pathdb {
-  tuple_t path [MAX_TUPLES];
+  t_tuple_t path [MAX_TUPLES];
 };

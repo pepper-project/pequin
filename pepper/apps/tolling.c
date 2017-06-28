@@ -53,7 +53,7 @@ cost_t compute_cost(struct pathdb* db){
 
   int i;
   for(i = 0; i < MAX_TUPLES; i++){
-    tuple_t* here = &(db->path[i]);
+    t_tuple_t* here = &(db->path[i]);
 
     toRet += here->toll;
   }
@@ -61,7 +61,7 @@ cost_t compute_cost(struct pathdb* db){
   return toRet;
 }
 
-int close_match(tuple_t* s, tuple_t* v, int32_t threshold){
+int close_match(t_tuple_t* s, t_tuple_t* v, int32_t threshold){
   int toRet = 0;
   int64_t time_diff = ((int64_t)s->time) - v->time;
   if (time_diff < threshold &&
@@ -87,9 +87,9 @@ int verified_tolling(struct pathdb* db, VerifierSideIn* input, struct Out* outpu
 
     int j;
     //THIS IS SLOW. TODO: permutation network implementation.
-    tuple_t* s = &(input->spotchecks[i]);
+    t_tuple_t* s = &(input->spotchecks[i]);
     for(j = 0; j < MAX_TUPLES; j++){
-      tuple_t* v = &(db->path[j]);
+      t_tuple_t* v = &(db->path[j]);
       if (close_match(s,v,input->time_threshold)){
         found = 1;
       }
