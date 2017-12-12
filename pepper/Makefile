@@ -1,15 +1,23 @@
 CXX = g++
-CXXFLAGS = -m64 -std=c++11 -DCURVE_BN128 -DBN_SUPPORT_SNARK
+
+# according to libsnark's documentation, we need to use the same conditional defines libsnark was compiled with, as found in
+# thirdparty/libsnark/build/libsnark/CMakeFiles/snark.dir/flags.make
+CXXFLAGS = -m64 -std=c++11 -DCURVE_BN128 -DBN_SUPPORT_SNARK -DBINARY_OUTPUT -DMONTGOMERY_OUTPUT -DNO_PROCPS -DUSE_ASM
 
 AR	:= ar rcs
 
 DEPSDIR := $(HOME)/pepper_deps
 
-IFLAGS = -I./include -I. -I$(DEPSDIR)/include -I$(DEPSDIR)/include/libsnark
-IFLAGS += -I$(DEPSDIR)/include
+IFLAGS = -I./include -I. -I$(DEPSDIR)/include
+# we use some of libsnark's internal dependencies which appear not to be
+# installed properly by "make install" when installing libsnark, so we include
+# libsnark and its dependencies directly from its build directory.
+IFLAGS += -I../thirdparty/libsnark -I../thirdparty/libsnark/depends/libff -I../thirdparty/libsnark/depends/libfqfft
 
-LDFLAGS = -L$(DEPSDIR)/lib -lsnark -lgmp -lgmpxx
-LDFLAGS += -lpapi -lrt -lleveldb -lkyotocabinet -Wl,-rpath,$(DEPSDIR)/lib/
+
+LDFLAGS = -L$(DEPSDIR)/lib
+LDFLAGS += -L../thirdparty/libsnark/build/libsnark -L../thirdparty/libsnark/build/depends/libff/libff -L../thirdparty/libsnark/build/depends
+LDFLAGS += -lsnark -lff -lzm -lgmp -lgmpxx -lpapi -lrt -lleveldb -lkyotocabinet -Wl,-rpath,$(DEPSDIR)/lib/
 
 GENSRCDIR = gen
 BINDIR = bin
