@@ -1,5 +1,6 @@
 bin/
 gen/
+obj/
 pepper_prover
 pepper_verifier
 proving_material/
