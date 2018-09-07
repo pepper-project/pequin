@@ -28,7 +28,7 @@ should work.
     apt-get install python2.7 libpython2.7 libpython2.7-dev openjdk-7-jdk \
             golang build-essential gcc g++ gcc-multilib g++-multilib ant  \
             ant-optional make time libboost-all-dev libgmp10 libgmp-dev   \
-            zlib1g zlib1g-dev
+            zlib1g zlib1g-dev cmake
 
 ### Fedora
 
@@ -38,7 +38,7 @@ We have tested this with CentOS 7.
     yum groupinstall 'Development Tools'
     yum install python python-devel java-1.8.0-openjdk-devel golang gcc   \
         gcc-c++ glibc-devel libstdc++ glibc-devel.i686 libstdc++.i686 ant \
-        make time boost boost-devel gmp gmp-devel zlib zlib-devel
+        make time boost boost-devel gmp gmp-devel zlib zlib-devel cmake
 
 ### Arch
 
@@ -47,7 +47,7 @@ First, you need to enable multilib. See https://wiki.archlinux.org/index.php/mul
     pacman -S python python2 jdk7-openjdk go base-devel multilib-devel    \
            libstdc++5 lib32-glibc lib32-libstdc++5 lib32-gcc-libs         \
            gcc-libs-multilib libtool-multilib gcc-multilib apache-ant     \
-           make time boost boost-libs gmp zlib
+           make time boost boost-libs gmp zlib cmake
 
 Note that by default Arch uses python3 instead of python2. We haven't tested extensively,
 but it seems to work. If you have problems, you can try
@@ -94,3 +94,5 @@ When you've finished installing all of these, you should run `sudo ldconfig` for
 9. gmp (including development libraries)
 
 10. zlib
+
+11. cmake
