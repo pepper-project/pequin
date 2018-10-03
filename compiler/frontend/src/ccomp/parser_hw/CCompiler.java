@@ -1782,6 +1782,9 @@ public class CCompiler {
 					intType(signString, 64)); // "At least 64 bits in size"
 			typetable.put(join(signString, "long long int"),
 					intType(signString, 64)); // "At least 64 bits in size"
+
+			// NONSTANDARD "int128" extension
+			typetable.put(join(signString, "int128"), intType(signString, 128));
 		}
 
 		// NONSTANDARD "bool" extension
