@@ -163,7 +163,8 @@ public class ConstraintWriter {
 			operation_counts.put(CBuiltinFunctions.HASHPUT_NAME, 0);
 			operation_counts.put(CBuiltinFunctions.RAMGET_ENHANCED_NAME, 0);
 			operation_counts.put(CBuiltinFunctions.RAMPUT_ENHANCED_NAME, 0);
-            operation_counts.put(CBuiltinFunctions.EXO_COMPUTE_NAME, 0);
+			operation_counts.put(CBuiltinFunctions.EXO_COMPUTE_NAME, 0);
+			operation_counts.put(CBuiltinFunctions.EXT_GADGET_NAME, 0);
 
 			while ((line = bufferedreader.readLine()) != null) {
 				Scanner in = new Scanner(line);
@@ -194,7 +195,8 @@ public class ConstraintWriter {
 							+ (uniquifier++);
 					toConstraints_addBitVariablesList(in, varName);
 				} else if (type.equals(CBuiltinFunctions.RAMGET_NAME)
-                        || type.equals(CBuiltinFunctions.EXO_COMPUTE_NAME)
+						|| type.equals(CBuiltinFunctions.EXO_COMPUTE_NAME)
+						|| type.equals(CBuiltinFunctions.EXT_GADGET_NAME)
 						|| type.equals(CBuiltinFunctions.RAMPUT_NAME)
 						|| type.equals(CBuiltinFunctions.HASHGET_NAME)
 						|| type.equals(CBuiltinFunctions.HASHPUT_NAME)
@@ -211,6 +213,13 @@ public class ConstraintWriter {
 						String variableName = in.next();
 						out.println("V" + variableName + " //"
 								+ line.split("//")[1]);
+					}
+					if (type.equals(CBuiltinFunctions.EXT_GADGET_NAME)) {
+						// print intermediate variables for ext_gadget
+						final CompiledStatement.ParsedExtGadget p = CompiledStatement.extGadgetParser(in);
+						for (int i = 0; i < p.intermediateVarCount; i++) {
+							out.println("G" + p.gadgetId + "V" + i + " //" + line.split("//")[1]);
+						}
 					}
 					// Do nothing else.
 				} else if (type.equals(CBuiltinFunctions.ASSERT_ZERO_NAME)
@@ -360,7 +369,9 @@ public class ConstraintWriter {
 		} else if (type.equals("split")) {
 			compileSplitConstraint(in);
         } else if (type.equals(CBuiltinFunctions.EXO_COMPUTE_NAME)) {
-            compileExoComputeConstraint(in);
+			compileExoComputeConstraint(in);
+		} else if (type.equals(CBuiltinFunctions.EXT_GADGET_NAME)) {
+			compileExtGadgetConstraint(in);
 		} else if (type.equals(CBuiltinFunctions.RAMGET_ENHANCED_NAME)) {
 			compileRAMGetEnhancedConstraint(in);
 		} else if (type.equals(CBuiltinFunctions.RAMPUT_ENHANCED_NAME)) {
@@ -610,24 +621,41 @@ public class ConstraintWriter {
 
         // then just print the same damn thing out again
         out.print(CBuiltinFunctions.EXO_COMPUTE_NAME.toUpperCase() + " EXOID " + Integer.toString(p.exoId) + " INPUTS [ ");
-        compileExoLL(p.inVarsStr);
+        compileLL(p.inVarsStr);
 
         out.print("] OUTPUTS [ ");
-        compileExoL(p.outVarsStr);
+        compileL(p.outVarsStr);
 
         out.println("]");
-    }
+	}
+	
+	private void compileExtGadgetConstraint(Scanner in) {
+		// parse the line
+		final CompiledStatement.ParsedExtGadget p = CompiledStatement.extGadgetParser(in);
 
-    private void compileExoL(List<String> inL) {
+		if (in.hasNextLine()) {
+			in.nextLine();
+		}
+
+		out.print(CBuiltinFunctions.EXT_GADGET_NAME.toUpperCase() + " GADGETID " + Integer.toString(p.gadgetId) + " INPUTS [ ");
+        compileL(p.inVarsStr);
+
+        out.print("] OUTPUTS [ ");
+        compileL(p.outVarsStr);
+
+		out.println("] INTERMEDIATE " + p.intermediateVarCount);
+	}
+
+    private void compileL(List<String> inL) {
         for (String s : inL) {
             out.print(getConstraintVarName(Integer.parseInt(s)) + " ");
         }
     }
 
-    private void compileExoLL(List<List<String>> inL) {
+    private void compileLL(List<List<String>> inL) {
         for (List<String> thisL : inL) {
             out.print("[ ");
-            compileExoL(thisL);
+            compileL(thisL);
             out.print("] ");
         }
     }

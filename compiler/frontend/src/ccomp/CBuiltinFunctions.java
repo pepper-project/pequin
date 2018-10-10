@@ -12,5 +12,6 @@ public class CBuiltinFunctions {
                              COMMITMENTPUT_NAME = "commitmentput",
                              RAMPUT_ENHANCED_NAME = "ramput_fast",
                              RAMGET_ENHANCED_NAME = "ramget_fast",
-                             EXO_COMPUTE_NAME = "exo_compute";
+                             EXO_COMPUTE_NAME = "exo_compute",
+                             EXT_GADGET_NAME = "ext_gadget";
 }

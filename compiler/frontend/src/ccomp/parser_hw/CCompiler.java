@@ -29,6 +29,7 @@ import SFE.Compiler.CompileTimeOperator;
 import SFE.Compiler.ConstExpression;
 import SFE.Compiler.Consts;
 import SFE.Compiler.ExoComputeStatement;
+import SFE.Compiler.ExtGadgetStatement;
 import SFE.Compiler.RamGetEnhancedStatement;
 import SFE.Compiler.RamPutEnhancedStatement;
 import SFE.Compiler.FloatConstant;
@@ -1079,16 +1080,16 @@ public class CCompiler {
 		return cc;
 	}
 
-    private void exoCompGetOutputVars(LvalExpression outStrP, List<LvalExpression> outVars, Map<String, StructAccessOperator> saoMap, ArrayAccessOperator aao, StatementBuffer sb) {
+    private void getOutputVars(LvalExpression outStrP, List<LvalExpression> outVars, Map<String, StructAccessOperator> saoMap, ArrayAccessOperator aao, StatementBuffer sb, String operation) {
         if ( outStrP.getType() instanceof PointerType ) {
-            throw new RuntimeException("EXO_COMPUTE output data must be concrete types, not pointers.");
+            throw new RuntimeException(operation + " output data must be concrete types, not pointers.");
         }
         else if ( outStrP.getType() instanceof ArrayType ) {
             // an array of things to add to the output variables list
             final int outLen = ((ArrayType) outStrP.getType()).getLength();
             for (int i=0; i<outLen; i++) {
                 // recursive call on each member of the array
-                exoCompGetOutputVars(aao.resolve(outStrP,new IntConstant(i)), outVars, saoMap, aao, sb);
+                getOutputVars(aao.resolve(outStrP,new IntConstant(i)), outVars, saoMap, aao, sb, operation);
             }
         } else if ( outStrP.getType() instanceof StructType ) {
             // first, build the set of struct access operators we need for this struct
@@ -1102,15 +1103,23 @@ public class CCompiler {
                     sao = new StructAccessOperator(sFields.get(i));
                     saoMap.put(sFields.get(i),sao);
                 }
-                exoCompGetOutputVars(sao.resolve(outStrP), outVars, saoMap, aao, sb);
+                getOutputVars(sao.resolve(outStrP), outVars, saoMap, aao, sb, operation);
             }
         } else if ( outStrP.getType() instanceof SFE.Compiler.ScalarType ) {
             addStatement(new InputStatement(outStrP), sb);
             outVars.add(outStrP);
         } else {
-            throw new RuntimeException("EXO_COMPUTE cannot interpret output variable of type " + outStrP.metaType.toString());
+            throw new RuntimeException(operation + " cannot interpret output variable of type " + outStrP.metaType.toString());
         }
-    }
+	}
+	
+	private static int idFromExpression(SFE.Compiler.Expression expression) {
+		final FloatConstant fcCmp = FloatConstant.toFloatConstant(
+			SFE.Compiler.Expression.fullyResolve(expression));
+		final BigInteger denCmp = fcCmp.getDenominator();
+		final BigInteger numCmp = fcCmp.getNumerator();
+		return numCmp.divide(denCmp).intValue();
+	}
 
 	private SFE.Compiler.Expression builtinFunctionCall(CLexicalScope scope,
 			String funcName, int parse_uid, StatementBuffer sb,
@@ -1195,17 +1204,13 @@ public class CCompiler {
             final Map<String, StructAccessOperator> saoMap = new HashMap<String, StructAccessOperator>();
 
             // get the output variables, recursively expanding the structure of each element
-            exoCompGetOutputVars((LvalExpression) SFE.Compiler.Expression.fullyResolve(outStrP), outVars, saoMap, aao, sb);
+            getOutputVars((LvalExpression) SFE.Compiler.Expression.fullyResolve(outStrP), outVars, saoMap, aao, sb, funcName);
 
             // get the exoId so that we can set the scope name appropriately
             // exogenous computation number, that is, the identifier for the
             // backend which code to run on this input (we provide executables
             // named exo0, exo1, etc.)
-            final FloatConstant fcCmp = FloatConstant.toFloatConstant(
-                    SFE.Compiler.Expression.fullyResolve(eCmpNum));
-            final BigInteger denCmp = fcCmp.getDenominator();
-            final BigInteger numCmp = fcCmp.getNumerator();
-            final int exoId = numCmp.divide(denCmp).intValue();
+            final int exoId = idFromExpression(eCmpNum);
 
             /* begin test code
             // print some information about the arguments
@@ -1234,7 +1239,66 @@ public class CCompiler {
             addStatement(new ExoComputeStatement(inVars,outVars,exoId), sb);
 
             return VoidRetVal;
-        }
+		}
+		
+		if (funcName.equals(CBuiltinFunctions.EXT_GADGET_NAME)) {
+			// ext_gadget(void *inputs, someStruct *output,int cmpNum);
+			// >> input arrays and output array must be ArrayType <<
+			if (args.size() != 3) {
+                throw new RuntimeException("Number of arguments to EXT_GADGET must be 3.");
+            }
+            // now let's have a look at these here inputs
+            final SFE.Compiler.Expression inList = args.get(0);
+            final SFE.Compiler.Expression outStrP = args.get(1);
+            final SFE.Compiler.Expression eCmpNum = args.get(2);
+
+            // check first argument type: static array of structs
+            if (!(inList.metaType instanceof ArrayType)) {
+                throw new RuntimeException(
+                        "EXT_GADGET first arg must be a statically allocated array " + 
+                        "of pointers to lists of input for the exogenous computation.");
+			}
+			final ArrayType atInL = (ArrayType) inList.metaType;
+			final List<LvalExpression> inVars = new ArrayList<LvalExpression>(atInL.getLength());
+			final ArrayAccessOperator aao = new ArrayAccessOperator();
+			final PointerAccessOperator pao = new PointerAccessOperator();
+			for (int i=0;i<atInL.getLength();i++) {
+                final IntConstant idx = new IntConstant(i);
+
+				// get the ith LvalExpression in the 1st arg and add it to inputs
+				
+                // iterate over length of list, resolving and adding to input list
+                final LvalExpression lVal = pao.resolve(
+                    new SFE.Compiler.BinaryOpExpression(new PlusOperator(), inList, IntConstant.valueOf(i)));
+                if (!(lVal.getType() instanceof SFE.Compiler.ScalarType)) {
+					throw new RuntimeException(
+						"EXT_GADGET first arg must be an array of scalars.");
+				}
+				inVars.add(lVal);
+			}
+			            
+            // check second argument type: static array of structs
+            if (outStrP.metaType instanceof PointerType) {
+                throw new RuntimeException(
+                        "EXT_GADGET second arg must be statically allocated storage " +
+                        "for holding data from the exogenous compuation.");
+            }
+            final List<LvalExpression> outVars = new ArrayList<LvalExpression>();
+			final Map<String, StructAccessOperator> saoMap = new HashMap<String, StructAccessOperator>();
+
+            // get the output variables, recursively expanding the structure of each element
+            getOutputVars((LvalExpression) SFE.Compiler.Expression.fullyResolve(outStrP), outVars, saoMap, aao, sb, funcName);
+
+            // get the gadgetId so that we can set the scope name appropriately
+			// gadget number, that is, the identifier for the backend which code 
+			// to run on this input (we provide executables  named gadget0, gadget1, etc.)
+            int gadgetId = idFromExpression(eCmpNum);
+
+            // now we have everything we need to create the ExtGadgetStatement
+            addStatement(new ExtGadgetStatement(inVars,outVars,gadgetId), sb);
+
+            return VoidRetVal;
+		}
 
 		// fast_ram implementation.
 		if (funcName.equals(CBuiltinFunctions.RAMGET_ENHANCED_NAME)) {

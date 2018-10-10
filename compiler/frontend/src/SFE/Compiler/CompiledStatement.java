@@ -112,6 +112,10 @@ public class CompiledStatement extends Statement {
         if (type.equals(CBuiltinFunctions.EXO_COMPUTE_NAME)) {
             parseExoComputeLine(varNum, rp, in, assignments);
             return;
+		}
+		if (type.equals(CBuiltinFunctions.EXT_GADGET_NAME)) {
+            parseExtGadgetLine(varNum, rp, in, assignments);
+            return;
         }
 		if (type.equals(CBuiltinFunctions.RAMPUT_ENHANCED_NAME)) {
 			parseRamPutEnhancedLine(varNum, rp, in, assignments);
@@ -272,6 +276,20 @@ public class CompiledStatement extends Statement {
             this.inVarsStr = inVarsStr;
             this.outVarsStr = outVarsStr;
         }
+	}
+	
+	static class ParsedExtGadget {
+		final int gadgetId;
+		final int intermediateVarCount;
+        final List<String> inVarsStr;
+		final List<String> outVarsStr;
+
+        ParsedExtGadget(String gadgetIdStr, List<String> inVarsStr, List<String> outVarsStr, String intermediateVarCountStr) {
+			this.gadgetId = Integer.parseInt(gadgetIdStr);
+			this.intermediateVarCount = Integer.parseInt(intermediateVarCountStr);
+            this.inVarsStr = inVarsStr;
+			this.outVarsStr = outVarsStr;
+        }
     }
 
     // this lets us use the parser for Dependency Profiling where we're working over an array rather than a Scanner
@@ -291,33 +309,66 @@ public class CompiledStatement extends Statement {
     }
 
     static ParsedExoCompute exoComputeParser(Iterator<String> in) {
-        parseExoCheckInput(in,"EXOID");
+        parseCheckInput(in,"EXOID");
 
         // id#
         final String exoIdStr = in.next();
 
-        parseExoCheckInput(in,"INPUTS");
-        parseExoCheckInput(in,"[");
+        parseCheckInput(in,"INPUTS");
+        parseCheckInput(in,"[");
 
         // input variables
-        final List<List<String>> inVarsStr = parseExoLL(in);
+        final List<List<String>> inVarsStr = parseEL(in);
 
-        parseExoCheckInput(in,"OUTPUTS");
-        parseExoCheckInput(in,"[");
+        parseCheckInput(in,"OUTPUTS");
+        parseCheckInput(in,"[");
 
         // output variables
-        final List<String> outVarsStr = parseExoL(in);
+        final List<String> outVarsStr = parseL(in);
 
         // comment
-        parseExoCheckInput(in,"//");
-        parseExoCheckInput(in,"exo_compute");
-        parseExoCheckInput(in,"#"+exoIdStr);
-        parseExoCheckInput(in,"inVectors="+Integer.toString(inVarsStr.size()));
-        parseExoCheckInput(in,"outVars="+Integer.toString(outVarsStr.size()));
+        parseCheckInput(in,"//");
+        parseCheckInput(in,"exo_compute");
+        parseCheckInput(in,"#"+exoIdStr);
+        parseCheckInput(in,"inVectors="+Integer.toString(inVarsStr.size()));
+        parseCheckInput(in,"outVars="+Integer.toString(outVarsStr.size()));
 
         return new ParsedExoCompute(exoIdStr,inVarsStr,outVarsStr);
-    }
+	}
 
+	static ParsedExtGadget extGadgetParser(Iterator<String> in) {
+        parseCheckInput(in,"GADGETID");
+
+        // id#
+        final String gadgetIdStr = in.next();
+
+        parseCheckInput(in,"INPUTS");
+        parseCheckInput(in,"[");
+
+        // input variables
+        final List<String> inVarsStr = parseL(in);
+
+        parseCheckInput(in,"OUTPUTS");
+        parseCheckInput(in,"[");
+
+        // output variables
+		final List<String> outVarsStr = parseL(in);
+		
+		// intermediate variables
+		parseCheckInput(in,"INTERMEDIATE");
+		final String intermediateVarCountStr = in.next();
+
+        // comment
+        parseCheckInput(in,"//");
+        parseCheckInput(in,"ext_gadget");
+        parseCheckInput(in,"#"+gadgetIdStr);
+        parseCheckInput(in,"inVectors="+Integer.toString(inVarsStr.size()));
+		parseCheckInput(in,"outVars="+Integer.toString(outVarsStr.size()));
+		parseCheckInput(in,"intermediateVars="+intermediateVarCountStr);
+
+        return new ParsedExtGadget(gadgetIdStr,inVarsStr,outVarsStr,intermediateVarCountStr);
+	}
+	
     private void parseExoComputeLine(int varNum, ReferenceProfile rp,
             Scanner in, StatementBuffer assignments) {
 
@@ -325,21 +376,36 @@ public class CompiledStatement extends Statement {
         final ParsedExoCompute p = exoComputeParser(in);
 
         // parse input and output variable numbers into variables
-        final List<List<LvalExpression>> inVars = exoFindVarsLL(p.inVarsStr);
-        final List<LvalExpression> outVars = exoFindVarsL(p.outVarsStr);
+        final List<List<LvalExpression>> inVars = findVarsLL(p.inVarsStr);
+        final List<LvalExpression> outVars = findVarsL(p.outVarsStr);
 
         Program.resetCounter(varNum);   // force next statement to have the correct line number
         final ExoComputeStatement exo = new ExoComputeStatement(inVars,outVars,p.exoId);
         exo.toAssignmentStatements_NoChangeRef(assignments);
+	}
+	
+	private void parseExtGadgetLine(int varNum, ReferenceProfile rp,
+            Scanner in, StatementBuffer assignments) {
+
+        // parse the line
+        final ParsedExtGadget p = extGadgetParser(in);
+
+        // parse input and output variable numbers into variables
+        final List<LvalExpression> inVars = findVarsL(p.inVarsStr);
+        final List<LvalExpression> outVars = findVarsL(p.outVarsStr);
+
+        Program.resetCounter(varNum);   // force next statement to have the correct line number
+        final ExtGadgetStatement gadget = new ExtGadgetStatement(inVars,outVars,p.gadgetId);
+        gadget.toAssignmentStatements_NoChangeRef(assignments);
     }
 
     // find vars corresponding to each element in a list
-    private List<LvalExpression> exoFindVarsL(List<String> thisL) {
+    private List<LvalExpression> findVarsL(List<String> thisL) {
         final List<LvalExpression> outL = new ArrayList<LvalExpression>(thisL.size());
         for (String s : thisL) {
             final LvalExpression iExp = varByNumber.get(Integer.parseInt(s));
             if (null == iExp) {
-                throw new RuntimeException("Could not find variable " + s + " for exo_compute input.");
+                throw new RuntimeException("Could not find variable " + s + " for exo_compute/ext_gadget input.");
             }
             outL.add(iExp);
         }
@@ -347,23 +413,23 @@ public class CompiledStatement extends Statement {
     }
 
     // find vars in each element of a list of lists
-    private List<List<LvalExpression>> exoFindVarsLL(List<List<String>> thisLL) {
+    private List<List<LvalExpression>> findVarsLL(List<List<String>> thisLL) {
         final List<List<LvalExpression>> outLL = new ArrayList<List<LvalExpression>>(thisLL.size());
         for (List<String> thisL : thisLL) {
-            outLL.add(exoFindVarsL(thisL));
+            outLL.add(findVarsL(thisL));
         }
         return outLL;
     }
 
-    private static void parseExoCheckInput(Iterator<String> in, String expected) {
+    private static void parseCheckInput(Iterator<String> in, String expected) {
         final String nxt = in.next();
 
         if (! expected.equals(nxt)) {
-            throw new RuntimeException("Expected " + expected + " in parseExoCheckInput, got " + nxt + ".");
+            throw new RuntimeException("Expected " + expected + ", got " + nxt + ".");
         }
     }
 
-    private static List<String> parseExoL(Iterator<String> in) {
+    private static List<String> parseL(Iterator<String> in) {
         final List<String> outL = new ArrayList<String>();
         while (true) {
             final String nxt = in.next();
@@ -376,17 +442,17 @@ public class CompiledStatement extends Statement {
         return outL;
     }
 
-    private static List<List<String>> parseExoLL(Iterator<String> in) {
+    private static List<List<String>> parseEL(Iterator<String> in) {
         final List<List<String>> outList = new ArrayList<List<String>>();
         while (true) {
             final String nxt = in.next();
             if ("]".equals(nxt)) {
                 break;
             } else if (! "[".equals(nxt)) {
-                throw new RuntimeException("Expected [ or ] in parseExoLL, got " + nxt + ".");
+                throw new RuntimeException("Expected [ or ] in parseEL, got " + nxt + ".");
             }
 
-            outList.add(parseExoL(in));
+            outList.add(parseL(in));
         }
 
         return outList;

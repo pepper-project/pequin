@@ -218,7 +218,27 @@ public class DependencyProfile {
                     final int i = Integer.parseInt(s);
                     refDatas.put(i, new int[] { 1, Integer.MAX_VALUE });
                 }
-            }
+			}
+			
+			// preserve gadgets
+			if (type.equals(CBuiltinFunctions.EXT_GADGET_NAME)) {
+				if (refDatas.containsKey(lineNumber)) {
+                    throw new RuntimeException("Assertion error (gadget) " + lineNumber);
+				}
+				refDatas.put(lineNumber, new int[] { 1, Integer.MAX_VALUE });   // ref from infty
+
+				// parse this whole line so that we can add refs to the inputs and outputs and intermediate
+				final CompiledStatement.ParsedExtGadget p = CompiledStatement.extGadgetParser(new CompiledStatement.ArrayIterator<String>(in,in_p));
+
+				for (String s : p.inVarsStr) {
+                    final int i = Integer.parseInt(s);
+                    refDatas.put(i, new int[] { 1, Integer.MAX_VALUE });
+                }
+				for (String s : p.outVarsStr) {
+                    final int i = Integer.parseInt(s);
+                    refDatas.put(i, new int[] { 1, Integer.MAX_VALUE });
+				}
+			}
 
 			int[] refs = null;
 			if (type.equals(CBuiltinFunctions.RAMGET_NAME)
