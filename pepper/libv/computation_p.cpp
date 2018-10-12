@@ -107,6 +107,98 @@ static void expect_next_token(FILE* fp, const char* expected, const char* error)
   zcomp_assert(buf, expected, error);
 }
 
+static std::vector<std::string> execute_command(char *cmd, const char *arg, std::string& procIn) {
+  // get ready to launch child process
+  int stdinFD[2];
+  int stdoutFD[2];
+  const int PIPE_RD = 0;  // much easier to read this way
+  const int PIPE_WR = 1;
+
+  if (pipe(stdinFD) < 0) {
+      gmp_printf("ERROR: exo_compute couldn't open stdin pipes: %d\n", errno);
+      exit(1);
+  }
+  if (pipe(stdoutFD) < 0) {
+      gmp_printf("ERROR: exo_compute couldn't open stdout pipes: %d\n", errno);
+      exit(1);
+  }
+
+  int chld = fork();
+  if (chld == 0) {    // this is the child process
+      //make sure the executable exists
+      std::ifstream f(cmd);
+      if (f.good()) {
+          f.close();
+      }
+      else {
+          gmp_printf("ERROR: %s not found. Aborting.\n");
+          exit(1);
+      }
+
+      // "a careful programmer will not use dup2() without closing newfd first."
+      close(STDIN_FILENO);
+      close(STDOUT_FILENO);
+
+      // replace stdin and stdout with the pipes the parent gave us
+      if (dup2(stdinFD[PIPE_RD], STDIN_FILENO) < 0) {
+          gmp_printf("ERROR: execute_command (child) could not replace stdin: %d\n", errno);
+          exit(-1);
+      }
+      if (dup2(stdoutFD[PIPE_WR], STDOUT_FILENO) < 0) {
+          gmp_printf("ERROR: execute_command (child) could not replace stdout: %d\n", errno);
+          exit(-1);
+      }
+
+      // don't need these any more. Note that we are closing after duping, which
+      // is OK because the other copy is still open
+      close(stdinFD[0]); close(stdinFD[1]); close(stdoutFD[0]); close(stdoutFD[1]);
+
+      // now exec it
+      // "exo0 100 5" or whatever
+      execlp(cmd,cmd,arg,(char *)NULL);
+      //execlp("cat","cat",(char *)NULL);
+
+      // if we get here, there was an error!
+      gmp_printf("ERROR: execute_command (child) failed to exec: %d\n", errno);
+      exit(-1);
+  } else if (chld < 0) {  // failed to create child process
+      gmp_printf("ERROR: execute_command failed to fork: %d\n", errno);
+      exit(1);
+  }
+
+  // don't need the remote endpoints of these two pipes
+  close(stdinFD[PIPE_RD]); close(stdoutFD[PIPE_WR]);
+
+  // write the input to the process
+  if (write(stdinFD[PIPE_WR], procIn.c_str(), procIn.length()) < (int) procIn.length()) {
+      gmp_printf("ERROR: execute_command failed to write full input string to child process: %d\n", errno);
+      exit(1);
+  }
+  // close the pipe to send EOF
+  close(stdinFD[PIPE_WR]);
+
+  // now grab its output back
+  std::stringstream procOut;
+  int rdNum = read(stdoutFD[PIPE_RD], cmd, BUFLEN-1);
+  while (rdNum > 0) {
+      cmd[rdNum] = '\0'; // add null termination so we can send it to the stream
+      procOut << cmd;
+      rdNum = read(stdoutFD[PIPE_RD], cmd, BUFLEN-1);
+  }
+  close(stdoutFD[PIPE_RD]);
+  // make sure we didn't error out of the above loop
+  if (rdNum < 0) {
+      gmp_printf("ERROR: execute_command failed reading from child process: %d\n", errno);
+      exit(1);
+  }
+
+  // now tokenize the input we just got
+  std::istream_iterator<std::string> pOutIter(procOut);
+  std::istream_iterator<std::string> eof;
+  std::vector<std::string> pOutTok(pOutIter,eof);
+  return pOutTok;
+}
+
 void ComputationProver::init_block_store() {
   snprintf(bstore_file_path, BUFLEN - 1, "%s/block_stores", FOLDER_STATE);
   mkdir(bstore_file_path, S_IRWXU);
@@ -531,13 +623,13 @@ void ComputationProver::compute_exo_compute(FILE *pws_file) {
     expect_next_token(pws_file, "[", "Invalid EXO_COMPUTE");
     std::vector< std::vector<std::string> > inVarsStr;
     // get the input args
-    compute_exo_compute_getLL(inVarsStr, pws_file, cmds);
+    getLL(inVarsStr, pws_file, cmds);
 
     expect_next_token(pws_file, "OUTPUTS", "Invalid EXO_COMPUTE");
     expect_next_token(pws_file, "[", "Invalid EXO_COMPUTE");
     std::vector<std::string> outVarsStr;
     // get the output args
-    compute_exo_compute_getL(outVarsStr, pws_file, cmds);
+    getL(outVarsStr, pws_file, cmds);
 
     // now prepare the string we will send to stdin of the process
     std::stringstream procIn;
@@ -552,101 +644,13 @@ void ComputationProver::compute_exo_compute(FILE *pws_file) {
     }
     std::string procInStr = procIn.str();
 
-    // get ready to launch child process
-    int stdinFD[2];
-    int stdoutFD[2];
-    const int PIPE_RD = 0;  // much easier to read this way
-    const int PIPE_WR = 1;
-
-    if (pipe(stdinFD) < 0) {
-        gmp_printf("ERROR: exo_compute couldn't open stdin pipes: %d\n", errno);
-        return;
-    }
-    if (pipe(stdoutFD) < 0) {
-        gmp_printf("ERROR: exo_compute couldn't open stdout pipes: %d\n", errno);
-        return;
-    }
-
-    int chld = fork();
-    if (chld == 0) {    // this is the child process
-        // build up the arguments to the command
-        sprintf(cmds, "./bin/exo%d",exoId);
-
-        //make sure the executable exists
-        std::ifstream f(cmds);
-        if (f.good()) {
-            f.close();
-        }
-        else {
-            gmp_printf("ERROR: %s not found. Aborting.\n");
-            exit(1);
-        }
-  
-        // buffer is totally big enough that this is acceptable. tee hee
-        char *outLenStr = cmds + strlen(cmds) + 2;
-        sprintf(outLenStr,"%d",outVarsStr.size());
-
-        // "a careful programmer will not use dup2() without closing newfd first."
-        close(STDIN_FILENO);
-        close(STDOUT_FILENO);
-
-        // replace stdin and stdout with the pipes the parent gave us
-        if (dup2(stdinFD[PIPE_RD], STDIN_FILENO) < 0) {
-            gmp_printf("ERROR: exo_compute (child) could not replace stdin: %d\n", errno);
-            exit(-1);
-        }
-        if (dup2(stdoutFD[PIPE_WR], STDOUT_FILENO) < 0) {
-            gmp_printf("ERROR: exo_compute (child) could not replace stdout: %d\n", errno);
-            exit(-1);
-        }
-
-        // don't need these any more. Note that we are closing after duping, which
-        // is OK because the other copy is still open
-        close(stdinFD[0]); close(stdinFD[1]); close(stdoutFD[0]); close(stdoutFD[1]);
-
-        // now exec it
-        // "exo0 100 5" or whatever
-        execlp(cmds,cmds,outLenStr,(char *)NULL);
-        //execlp("cat","cat",(char *)NULL);
-
-        // if we get here, there was an error!
-        gmp_printf("ERROR: exo_compute (child) failed to exec: %d\n", errno);
-        exit(-1);
-    } else if (chld < 0) {  // failed to create child process
-        gmp_printf("ERROR: exo_compute failed to fork: %d\n", errno);
-        return;
-    }
-
-    // don't need the remote endpoints of these two pipes
-    close(stdinFD[PIPE_RD]); close(stdoutFD[PIPE_WR]);
-
-    // write the input to the process
-    if (write(stdinFD[PIPE_WR], procInStr.c_str(), procInStr.length()) < (int) procInStr.length()) {
-        gmp_printf("ERROR: exo_compute failed to write full input string to child process: %d\n", errno);
-        return;
-    }
-    // close the pipe to send EOF
-    close(stdinFD[PIPE_WR]);
-
-    // now grab its output back
-    std::stringstream procOut;
-    int rdNum = read(stdoutFD[PIPE_RD], cmds, BUFLEN-1);
-    while (rdNum > 0) {
-        cmds[rdNum] = '\0'; // add null termination so we can send it to the stream
-        procOut << cmds;
-        rdNum = read(stdoutFD[PIPE_RD], cmds, BUFLEN-1);
-    }
-    close(stdoutFD[PIPE_RD]);
-    // make sure we didn't error out of the above loop
-    if (rdNum < 0) {
-        gmp_printf("ERROR: exo_compute failed reading from child process: %d\n", errno);
-        return;
-    }
-
-    // now tokenize the input we just got
-    std::istream_iterator<std::string> pOutIter(procOut);
-    std::istream_iterator<std::string> eof;
-    std::vector<std::string> pOutTok(pOutIter,eof);
+    // build up the arguments to the command and run it
+    sprintf(cmds, "./bin/exo%d",exoId);
+    
+    // buffer is totally big enough that this is acceptable. tee hee
+    char *outLenStr = cmds + strlen(cmds) + 2;
+    sprintf(outLenStr,"%d",outVarsStr.size());
+    std::vector<std::string> pOutTok = execute_command(cmds, outLenStr, procInStr);
 
     int pTok = 0;
 
@@ -666,7 +670,90 @@ void ComputationProver::compute_exo_compute(FILE *pws_file) {
     return;
 }
 
-void ComputationProver::compute_exo_compute_getLL(std::vector< std::vector<std::string> > &inLL, FILE *pws_file, char *buf) {
+void ComputationProver::compute_ext_gadget(FILE *pws_file) {
+    // read in the EXO_COMPUTE line
+    char cmds[BUFLEN];
+
+    // grab exoid
+    expect_next_token(pws_file, "GADGETID", "Invalid EXT_GADGET");
+    next_token_or_error(pws_file,cmds);
+    int gadgetId = atoi(cmds);
+
+    expect_next_token(pws_file, "INPUTS", "Invalid EXT_GADGET");
+    expect_next_token(pws_file, "[", "Invalid EXT_GADGET");
+    std::vector<std::string> inVarsStr;
+    // get the input args
+    getL(inVarsStr, pws_file, cmds);
+
+    expect_next_token(pws_file, "OUTPUTS", "Invalid EXT_GADGET");
+    expect_next_token(pws_file, "[", "Invalid EXT_GADGET");
+    std::vector<std::string> outVarsStr;
+    // get the output args
+    getL(outVarsStr, pws_file, cmds);
+
+    expect_next_token(pws_file, "INTERMEDIATE", "Invalid EXT_GADGET");
+    expect_next_token(pws_file, "[", "Invalid EXT_GADGET");
+    std::vector<std::string> intermediateVarsStr;
+    // get the output args
+    getL(intermediateVarsStr, pws_file, cmds);
+
+    // now prepare the string we will send to stdin of the process
+    std::stringstream procIn;
+    for (std::vector<std::string>::iterator it = inVarsStr.begin(); it != inVarsStr.end(); it++) {
+      mpq_t &vval = voc((*it).c_str(), temp_q);
+      procIn << mpq_get_str(cmds,10,vval) << " ";
+    }
+    std::string procInStr = procIn.str();
+
+    // build up the arguments to the command and run it
+    sprintf(cmds, "./bin/gadget%d", gadgetId);
+    std::vector<std::string> pOutTok = execute_command(cmds, "witness", procInStr);
+
+    // walk through the tokens from the child process and the variable lists, assigning the latter to the former
+    // First inputs, they should be the same as what we passed in
+    std::vector<std::string>::const_iterator outTokIt = pOutTok.cbegin();
+    for (std::vector<std::string>::const_iterator it = inVarsStr.cbegin(); it != inVarsStr.cend(); it++) {
+      mpq_t &vval = voc((*it).c_str(),temp_q);
+      if (&vval == &temp_q) {
+          gmp_printf("ERROR: ext_gadget trying to write output to a const value, %s.\n", (*it).c_str());
+      }
+      char value[BUFLEN];
+      mpq_get_str(value, 10, vval);
+      assert(strcmp(value, outTokIt->c_str()) == 0);
+      outTokIt++;
+    }
+
+    // Then assing outputs
+    for (std::vector<std::string>::const_iterator it = outVarsStr.cbegin(); it != outVarsStr.cend(); it++) {
+      mpq_t &vval = voc((*it).c_str(),temp_q);
+      assert(outTokIt != pOutTok.cend());
+      if (&vval == &temp_q) {
+          gmp_printf("ERROR: ext_gadget trying to write output to a const value, %s.\n", (*it).c_str());
+      } else if (mpq_set_str(vval, outTokIt->c_str(), 0) < 0) {
+          gmp_printf("ERROR: ext_gadget failed to convert child process output to mpq_t: %s\n", outTokIt->c_str());
+      }
+      outTokIt++;
+    }
+
+    // Last but not least assing intermediate
+    for (std::vector<std::string>::const_iterator it = intermediateVarsStr.cbegin(); it != intermediateVarsStr.cend(); it++) {
+      mpq_t &vval = voc((*it).c_str(),temp_q);
+      assert(outTokIt != pOutTok.cend());
+      if (&vval == &temp_q) {
+          gmp_printf("ERROR: ext_gadget trying to write output to a const value, %s.\n", (*it).c_str());
+      } else if (mpq_set_str(vval, outTokIt->c_str(), 0) < 0) {
+          gmp_printf("ERROR: ext_gadget failed to convert child process output to mpq_t: %s\n", outTokIt->c_str());
+      }
+      outTokIt++;
+    }
+    // Make sure there are no more tokens left in the output
+    assert(outTokIt == pOutTok.cend());
+
+    // and we're done!
+    return;
+}
+
+void ComputationProver::getLL(std::vector< std::vector<std::string> > &inLL, FILE *pws_file, char *buf) {
     // pull until we get ] ]
     while(1) {
         // if we have ] then we're done
@@ -678,12 +765,12 @@ void ComputationProver::compute_exo_compute_getLL(std::vector< std::vector<std::
 
         // now pull in the whole list
         std::vector<std::string> tmpList;
-        compute_exo_compute_getL(tmpList,pws_file,buf);
+        getL(tmpList,pws_file,buf);
         inLL.push_back(tmpList);
     }
 }
 
-void ComputationProver::compute_exo_compute_getL(std::vector<std::string> &inL, FILE *pws_file, char *buf) {
+void ComputationProver::getL(std::vector<std::string> &inL, FILE *pws_file, char *buf) {
     while(1) {
         next_token_or_error(pws_file, buf);
         if(strcmp(buf,"]") == 0) { break; }
@@ -1333,6 +1420,8 @@ void ComputationProver::compute_from_pws(const char* pws_filename) {
       compute_waksman_network(pws_file);
     } else if (strcmp(tok, "EXO_COMPUTE") == 0) {
       compute_exo_compute(pws_file);
+    } else if (strcmp(tok, "EXT_GADGET") == 0) {
+      compute_ext_gadget(pws_file);
     } else {
       gmp_printf("Unrecognized token: %s\n", tok);
     }

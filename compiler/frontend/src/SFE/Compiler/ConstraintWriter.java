@@ -49,9 +49,9 @@ public class ConstraintWriter {
 		int uniquifier = 0;
 
         // exoCompute output variables; we use this to hold comments and to check that we've found them all
-        final HashMap<String, Boolean> exoCompOutputs = new HashMap<String, Boolean>();
+        final HashMap<String, Boolean> exOutputs = new HashMap<String, Boolean>();
 
-        // first pass - look for exo_compute statements and gather up
+        // first pass - look for exo_compute/ext_gadget statements and gather up
         // their output variables so that we can convert them to normal
         // variables
         // think: nondeterministic inputs aren't inputs from the circuit POV
@@ -62,18 +62,28 @@ public class ConstraintWriter {
 
             String line = null;
             while ((line = br.readLine()) != null) {
-                // greater than zero because we know there's a line number and a space first!
-                if (line.indexOf(CBuiltinFunctions.EXO_COMPUTE_NAME) > 0) {
+				// greater than zero because we know there's a line number and a space first!
+				boolean isExoCompute = line.indexOf(CBuiltinFunctions.EXO_COMPUTE_NAME) > 0;
+				boolean isExtGadget = line.indexOf(CBuiltinFunctions.EXT_GADGET_NAME) > 0;
+                if (isExoCompute || isExtGadget) {
                     final Scanner in = new Scanner(line);
                     final String lineNo = in.next();
-                    in.next();  // CBuiltinFunctions.EXO_COMPUTE_NAME
-                    final CompiledStatement.ParsedExoCompute p = CompiledStatement.exoComputeParser(in);
+					in.next();  // CBuiltinFunctions.EXO_COMPUTE_NAME or EXT_GADGET_NAME
+					
+					List<String> outVars;
+					if (isExoCompute) {
+						final CompiledStatement.ParsedExoCompute p = CompiledStatement.exoComputeParser(in);
+						outVars = p.outVarsStr;
+					} else {
+						final CompiledStatement.ParsedExtGadget p = CompiledStatement.extGadgetParser(in);
+						outVars = p.outVarsStr;
+					}
 
-                    for (String s : p.outVarsStr) {
-                        if (null != exoCompOutputs.get(s)) {
-                            throw new RuntimeException("Error: two EXO_COMPUTE statements write the same variable.");
+                    for (String s : outVars) {
+                        if (null != exOutputs.get(s)) {
+                            throw new RuntimeException("Error: two EXO_COMPUTE or EXT_GADGET statements write the same variable.");
                         }
-                        exoCompOutputs.put(s,true);   // for now, just put in a dummy string, we'll fill this in in the next pass
+                        exOutputs.put(s,true);   // for now, just put in a dummy string, we'll fill this in in the next pass
                     }
                 }
             }
@@ -94,8 +104,8 @@ public class ConstraintWriter {
 				}
 				int varNum = new Integer(firstTerm);
 				if (in.next().equals("input")) {
-                    if (null == exoCompOutputs.get(firstTerm)) {
-                        // normal input variable, since it's not in the exoCompOutputs
+                    if (null == exOutputs.get(firstTerm)) {
+                        // normal input variable, since it's not in the exOutputs
                         String comment = line.split("//")[1];
                         inputVariables.put(varNum, comment);
                         String variableName = "I" + varNum;
@@ -229,7 +239,7 @@ public class ConstraintWriter {
 				} else {
 					if (!inputVariables.containsKey(varNum) && !outputVariables.contains(varNum)) {
                         // this might fail silently, but that's OK, we check later that we got them all
-                        exoCompOutputs.remove(firstTerm);
+                        exOutputs.remove(firstTerm);
 
 						String variableName = "V" + varNum;
 						out.println(variableName + " //" + line.split("//")[1]);
@@ -241,8 +251,8 @@ public class ConstraintWriter {
 			out.println("END_VARIABLES");
 			bufferedreader.close();
 
-            assert exoCompOutputs.size() == 0 :
-                "exoCompOutputs has remaining elements, indicating that we failed to add all its contents to the VARIABLES list.";
+            assert exOutputs.size() == 0 :
+                "exOutputs has remaining elements, indicating that we failed to add all its contents to the VARIABLES list.";
 
 			// Print to stdout the op counts:
 			for (Entry<String, Integer> entry : operation_counts.entrySet()) {

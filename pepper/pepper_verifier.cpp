@@ -81,7 +81,7 @@ void run_setup(int num_constraints, int num_inputs,
             libsnark::linear_combination<FieldT> A, B, C;
             
             while(Aj == currentconstraint && Amat)
-                {                  
+                {        
                     if (Ai <= num_intermediate_vars && Ai != 0)
                         Ai += num_inputs_outputs;
                     else if (Ai > num_intermediate_vars)

@@ -92,7 +92,6 @@ pepper_verifier_%: pepper_verifier.cpp objs common_defs.h $(BINDIR)/%.params
 	@echo ""
 	$(CXX) $(CXXFLAGS) -DNAME=\"$(TARG)\" $(IFLAGS)  $<  -o $(BINDIR)/$@ $(COMMON_LIB_OBJFILES) $(LDFLAGS)
 
-
 pepper_prover_%: pepper_prover.cpp objs common_defs.h $(BINDIR)/%.params
 	$(eval TARG := $(@:pepper_prover_%=%))
 	$(CXX) $(CXXFLAGS) -DNAME=\"$(TARG)\" $(IFLAGS)  $<  -o $(BINDIR)/$@ $(COMMON_LIB_OBJFILES) $(LDFLAGS)

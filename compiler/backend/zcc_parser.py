@@ -1694,13 +1694,20 @@ Expecting `[{{aIndex: aValue, ...}}, {{bIndex: bValue, ...}}, {{cIndex: cValue, 
         # Insert constraints into matrices
         for matrix, out in {0: fp_matrix_a, 1: fp_matrix_b, 2: fp_matrix_c}.iteritems():
           for index, value in constraints[matrix].iteritems():
+            if value == "0":
+              continue
             index  = int(index)
             # remap index to correct variable name, unless it's 0 (meaning constant 1)
             if index != 0:
               (_, varName) = to_var(varList[index-1])
               index = convert_variable_to_index(varName, shuffled_indices)
-            out.write("{} {} {}".format(index, j, value))
-            
+              assert index != 0
+
+            # Libsnark constraints are A*B = C, vs. A*B - C = 0 for Zaatar.
+            # Which is why the C coefficient is negated.
+            if (matrix == 2):
+              value = "-" + value;
+            out.write("{} {} {}\n".format(index, j, value))
         j = j + 1
         num_constraints = num_constraints + 1
     else:
