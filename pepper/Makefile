@@ -95,8 +95,7 @@ pepper_verifier_%: pepper_verifier.cpp objs common_defs.h $(BINDIR)/%.params
 pepper_prover_%: pepper_prover.cpp objs common_defs.h $(BINDIR)/%.params
 	$(eval TARG := $(@:pepper_prover_%=%))
 	$(CXX) $(CXXFLAGS) -DNAME=\"$(TARG)\" $(IFLAGS)  $<  -o $(BINDIR)/$@ $(COMMON_LIB_OBJFILES) $(LDFLAGS)
-
-
+	
 objs: $(COMMON_LIB_OBJFILES)
 		@echo + compiling common objs
 
@@ -178,3 +177,6 @@ clean:
 	rm -f ../compiler/tmptime
 	cd ../compiler/frontend; make clean; 
 	cd ../compiler/buffetfsm; make clean;
+
+gadget%: ext_gadget_bridge.cpp
+	$(CXX) $(CXXFLAGS) -UBINARY_OUTPUT -DNAME=\"$(TARG)\" $(IFLAGS)  $<  -o $(BINDIR)/$@ $(COMMON_LIB_OBJFILES) $(LDFLAGS)
