@@ -46,29 +46,32 @@ void run_setup(int num_constraints, int num_inputs,
     Amat >> Aj;
     Amat >> Acoef;
 
-    if (mpz_sgn(Acoef) == -1)
+    if (mpz_sgn(Acoef) == -1) {
         mpz_add(Acoef, p, Acoef);
+    }
+    mpz_mod(Acoef, Acoef, p);
     
     //    std::cout << Ai << " " << Aj << " " << Acoef << std::std::endl;
 
     Bmat >> Bi;
     Bmat >> Bj;
     Bmat >> Bcoef;
-    if (mpz_sgn(Bcoef) == -1)
+    if (mpz_sgn(Bcoef) == -1) {
         mpz_add(Bcoef, p, Bcoef);
+    }
+    mpz_mod(Bcoef, Bcoef, p);
     
     Cmat >> Ci;
     Cmat >> Cj;
     Cmat >> Ccoef;
 
-    if (mpz_sgn(Ccoef) == -1)
+    if (mpz_sgn(Ccoef) == -1) {
         mpz_mul_si(Ccoef, Ccoef, -1);
-
-    else if(mpz_sgn(Ccoef) == 1)
-        {
-            mpz_mul_si(Ccoef, Ccoef, -1);
-            mpz_add(Ccoef, p, Ccoef);
-        }
+    } else if(mpz_sgn(Ccoef) == 1) {
+        mpz_mul_si(Ccoef, Ccoef, -1);
+        mpz_add(Ccoef, p, Ccoef);
+    }
+    mpz_mod(Ccoef, Ccoef, p);
     
     int num_intermediate_vars = num_vars;
     int num_inputs_outputs = num_inputs + num_outputs;
@@ -76,77 +79,82 @@ void run_setup(int num_constraints, int num_inputs,
     q.primary_input_size = num_inputs_outputs;
     q.auxiliary_input_size = num_intermediate_vars;
     
-    for (int currentconstraint = 1; currentconstraint <= num_constraints; currentconstraint++)
-        {
-            libsnark::linear_combination<FieldT> A, B, C;
+    for (int currentconstraint = 1; currentconstraint <= num_constraints; currentconstraint++) {
+        libsnark::linear_combination<FieldT> A, B, C;
+        
+        while(Aj == currentconstraint && Amat) {                  
+            if (Ai <= num_intermediate_vars && Ai != 0) {
+                Ai += num_inputs_outputs;
+            } else if (Ai > num_intermediate_vars) {
+                Ai -= num_intermediate_vars;
+            }
             
-            while(Aj == currentconstraint && Amat)
-                {                  
-                    if (Ai <= num_intermediate_vars && Ai != 0)
-                        Ai += num_inputs_outputs;
-                    else if (Ai > num_intermediate_vars)
-                        Ai -= num_intermediate_vars;
-                    
-                    FieldT AcoefT(Acoef);
-                    A.add_term(Ai, AcoefT);
-                    if(!Amat)
-                        break;
-                    Amat >> Ai;
-                    Amat >> Aj;
-                    Amat >> Acoef; 
-                    if (mpz_sgn(Acoef) == -1)
-                        mpz_add(Acoef, p, Acoef);
-                }
-            
-            while(Bj == currentconstraint && Bmat)
-                {
-                    if (Bi <= num_intermediate_vars && Bi != 0)
-                        Bi += num_inputs_outputs;
-                    else if (Bi > num_intermediate_vars)
-                        Bi -= num_intermediate_vars;
-                    //         std::cout << Bi << " " << Bj << " " << Bcoef << std::std::endl;
-                    FieldT BcoefT(Bcoef);
-                    B.add_term(Bi, BcoefT);
-                    if (!Bmat)
-                        break;
-                    Bmat >> Bi;
-                    Bmat >> Bj;
-                    Bmat >> Bcoef;
-                    if (mpz_sgn(Bcoef) == -1)
-                        mpz_add(Bcoef, p, Bcoef);
-                }
-            
-            while(Cj == currentconstraint && Cmat)
-                {
-                    if (Ci <= num_intermediate_vars && Ci != 0)
-                        Ci += num_inputs_outputs;
-                    else if (Ci > num_intermediate_vars)
-                    Ci -= num_intermediate_vars;
-                    //Libsnark constraints are A*B = C, vs. A*B - C = 0 for Zaatar.
-                    //Which is why the C coefficient is negated. 
-                    
-                    // std::cout << Ci << " " << Cj << " " << Ccoef << std::std::endl;
-                    FieldT CcoefT(Ccoef);
-                    C.add_term(Ci, CcoefT);
-                    if (!Cmat)
-                        break;
-                    Cmat >> Ci;
-                    Cmat >> Cj;
-                    Cmat >> Ccoef;
-                    if (mpz_sgn(Ccoef) == -1)
-                        mpz_mul_si(Ccoef, Ccoef, -1);
-                    else if (mpz_sgn(Ccoef) == 1)
-                        {
-                            mpz_mul_si(Ccoef, Ccoef, -1);
-                            mpz_add(Ccoef, p, Ccoef);
-                        }
-		  
-                }
-            
-            q.add_constraint(libsnark::r1cs_constraint<FieldT>(A, B, C));
-            
-            //dump_constraint(r1cs_constraint<FieldT>(A, B, C), va, variable_annotations);
+            FieldT AcoefT(Acoef);
+            A.add_term(Ai, AcoefT);
+            if(!Amat) {
+                break;
+            }
+            Amat >> Ai;
+            Amat >> Aj;
+            Amat >> Acoef; 
+            if (mpz_sgn(Acoef) == -1) {
+                mpz_add(Acoef, p, Acoef);
+            }
+            mpz_mod(Acoef, Acoef, p);
         }
+        
+        while(Bj == currentconstraint && Bmat) {
+            if (Bi <= num_intermediate_vars && Bi != 0) {
+                Bi += num_inputs_outputs;
+            } else if (Bi > num_intermediate_vars) {
+                Bi -= num_intermediate_vars;
+            }
+            //         std::cout << Bi << " " << Bj << " " << Bcoef << std::std::endl;
+            FieldT BcoefT(Bcoef);
+            B.add_term(Bi, BcoefT);
+            if (!Bmat) {
+                break;
+            }
+            Bmat >> Bi;
+            Bmat >> Bj;
+            Bmat >> Bcoef;
+            if (mpz_sgn(Bcoef) == -1) {
+                mpz_add(Bcoef, p, Bcoef);
+            }
+            mpz_mod(Bcoef, Bcoef, p);
+        }
+        
+        while(Cj == currentconstraint && Cmat) {
+            if (Ci <= num_intermediate_vars && Ci != 0) {
+                Ci += num_inputs_outputs;
+            } else if (Ci > num_intermediate_vars) {
+                Ci -= num_intermediate_vars;
+            }
+            //Libsnark constraints are A*B = C, vs. A*B - C = 0 for Zaatar.
+            //Which is why the C coefficient is negated. 
+            
+            // std::cout << Ci << " " << Cj << " " << Ccoef << std::std::endl;
+            FieldT CcoefT(Ccoef);
+            C.add_term(Ci, CcoefT);
+            if (!Cmat) {
+                break;
+            }
+            Cmat >> Ci;
+            Cmat >> Cj;
+            Cmat >> Ccoef;
+            if (mpz_sgn(Ccoef) == -1) {
+                mpz_mul_si(Ccoef, Ccoef, -1);
+            } else if (mpz_sgn(Ccoef) == 1) {
+                mpz_mul_si(Ccoef, Ccoef, -1);
+                mpz_add(Ccoef, p, Ccoef);
+            }
+            mpz_mod(Ccoef, Ccoef, p);
+        }
+        
+        q.add_constraint(libsnark::r1cs_constraint<FieldT>(A, B, C));
+        
+        //dump_constraint(r1cs_constraint<FieldT>(A, B, C), va, variable_annotations);
+    }
     
     Amat.close();
     Bmat.close();
