@@ -1025,9 +1025,14 @@ def parse_ext_gadget_spec_line(terms):
   
   assert terms[cTok] == "INTERMEDIATE"
   cTok += 1
-  
   numIntermediate = int(terms[cTok])
-  intermediateVars = map(lambda i: "G{}V{}".format(gadgetId, i), range(0, numIntermediate))
+  cTok += 1
+
+  assert terms[cTok] == "OFFSET"
+  cTok += 1
+  offset = long(terms[cTok])
+  
+  intermediateVars = map(lambda i: "G{}V{}".format(gadgetId, i), range(offset, offset+numIntermediate))
 
   return (inVars,outVars,intermediateVars,gadgetId)
 

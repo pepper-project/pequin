@@ -281,12 +281,14 @@ public class CompiledStatement extends Statement {
 	static class ParsedExtGadget {
 		final int gadgetId;
 		final int intermediateVarCount;
+		final long intermediateVarOffset;
         final List<String> inVarsStr;
 		final List<String> outVarsStr;
 
-        ParsedExtGadget(String gadgetIdStr, List<String> inVarsStr, List<String> outVarsStr, String intermediateVarCountStr) {
+        ParsedExtGadget(String gadgetIdStr, List<String> inVarsStr, List<String> outVarsStr, String intermediateVarCountStr, String intermediateVarOffsetStr) {
 			this.gadgetId = Integer.parseInt(gadgetIdStr);
 			this.intermediateVarCount = Integer.parseInt(intermediateVarCountStr);
+			this.intermediateVarOffset = Long.parseLong(intermediateVarOffsetStr);
             this.inVarsStr = inVarsStr;
 			this.outVarsStr = outVarsStr;
         }
@@ -358,6 +360,9 @@ public class CompiledStatement extends Statement {
 		parseCheckInput(in,"INTERMEDIATE");
 		final String intermediateVarCountStr = in.next();
 
+		parseCheckInput(in,"OFFSET");
+		final String intermediateVarOffsetStr = in.next();
+
         // comment
         parseCheckInput(in,"//");
         parseCheckInput(in,"ext_gadget");
@@ -366,7 +371,7 @@ public class CompiledStatement extends Statement {
 		parseCheckInput(in,"outVars="+Integer.toString(outVarsStr.size()));
 		parseCheckInput(in,"intermediateVars="+intermediateVarCountStr);
 
-        return new ParsedExtGadget(gadgetIdStr,inVarsStr,outVarsStr,intermediateVarCountStr);
+        return new ParsedExtGadget(gadgetIdStr,inVarsStr,outVarsStr,intermediateVarCountStr,intermediateVarOffsetStr);
 	}
 	
     private void parseExoComputeLine(int varNum, ReferenceProfile rp,

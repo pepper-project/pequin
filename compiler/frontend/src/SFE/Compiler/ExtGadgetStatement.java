@@ -17,16 +17,21 @@ public class ExtGadgetStatement extends StatementWithOutputLine implements Outpu
     
     private final int compNum;
     private final int numIntermediateVar;
+    private final long intermediateVarOffset;
     private int outputLine = -1;
 
     // circuit writer for use by some ExpressionIterator.IterLLCalls
     private PrintWriter circuit;
+
+    private static long GLOBAL_INTERMEDIATE_VAR_COUNT = 0;
 
     public ExtGadgetStatement(List<LvalExpression> inVars, List<LvalExpression> outVars, int compNum) {
         this.inVars = inVars;
         this.outVars = outVars;
         this.compNum = compNum;
         this.numIntermediateVar = queryIntermediateVars();
+        this.intermediateVarOffset = GLOBAL_INTERMEDIATE_VAR_COUNT;
+        GLOBAL_INTERMEDIATE_VAR_COUNT += this.numIntermediateVar;
     }
 
     public Statement duplicate() {
@@ -78,13 +83,9 @@ public class ExtGadgetStatement extends StatementWithOutputLine implements Outpu
         // intermediate variables
         circuit.print("] INTERMEDIATE ");
         circuit.print(numIntermediateVar);
+        circuit.print(" OFFSET ");
+        circuit.print(intermediateVarOffset);
 
-        /*
-        for (int i = 0; i < numIntermediateVar; i++) {
-            circuit.print("G" + compNum + "V" + i + " ");
-        }
-        circuit.print(" ]");
-        */
         circuit.println("\t// " + this.toString());
     }
 

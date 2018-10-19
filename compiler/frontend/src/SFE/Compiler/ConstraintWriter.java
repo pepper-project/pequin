@@ -227,7 +227,7 @@ public class ConstraintWriter {
 					if (type.equals(CBuiltinFunctions.EXT_GADGET_NAME)) {
 						// print intermediate variables for ext_gadget
 						final CompiledStatement.ParsedExtGadget p = CompiledStatement.extGadgetParser(in);
-						for (int i = 0; i < p.intermediateVarCount; i++) {
+						for (long i = p.intermediateVarOffset; i < p.intermediateVarOffset + p.intermediateVarCount; i++) {
 							out.println("G" + p.gadgetId + "V" + i + " //" + line.split("//")[1]);
 						}
 					}
@@ -653,7 +653,7 @@ public class ConstraintWriter {
         out.print("] OUTPUTS [ ");
         compileL(p.outVarsStr);
 
-		out.println("] INTERMEDIATE " + p.intermediateVarCount);
+		out.println("] INTERMEDIATE " + p.intermediateVarCount + " OFFSET " + p.intermediateVarOffset);
 	}
 
     private void compileL(List<String> inL) {
