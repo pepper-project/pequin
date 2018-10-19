@@ -1080,37 +1080,37 @@ public class CCompiler {
 		return cc;
 	}
 
-    private void getOutputVars(LvalExpression outStrP, List<LvalExpression> outVars, Map<String, StructAccessOperator> saoMap, ArrayAccessOperator aao, StatementBuffer sb, String operation) {
-        if ( outStrP.getType() instanceof PointerType ) {
-            throw new RuntimeException(operation + " output data must be concrete types, not pointers.");
-        }
-        else if ( outStrP.getType() instanceof ArrayType ) {
-            // an array of things to add to the output variables list
-            final int outLen = ((ArrayType) outStrP.getType()).getLength();
-            for (int i=0; i<outLen; i++) {
-                // recursive call on each member of the array
-                getOutputVars(aao.resolve(outStrP,new IntConstant(i)), outVars, saoMap, aao, sb, operation);
-            }
-        } else if ( outStrP.getType() instanceof StructType ) {
-            // first, build the set of struct access operators we need for this struct
-            final StructType stT = (StructType) outStrP.getType();
-            final List<String> sFields = stT.getFields();
-            StructAccessOperator sao;
-            for (int i=0; i<sFields.size(); i++) {
-                // now recursively call on each element of the struct
-                // cache the StructAccessOperators so we don't have to create and destroy a billion of them
-                if ((sao = saoMap.get(sFields.get(i))) == null) {
-                    sao = new StructAccessOperator(sFields.get(i));
-                    saoMap.put(sFields.get(i),sao);
-                }
-                getOutputVars(sao.resolve(outStrP), outVars, saoMap, aao, sb, operation);
-            }
-        } else if ( outStrP.getType() instanceof SFE.Compiler.ScalarType ) {
-            addStatement(new InputStatement(outStrP), sb);
-            outVars.add(outStrP);
-        } else {
-            throw new RuntimeException(operation + " cannot interpret output variable of type " + outStrP.metaType.toString());
-        }
+	private void getOutputVars(LvalExpression outStrP, List<LvalExpression> outVars, Map<String, StructAccessOperator> saoMap, ArrayAccessOperator aao, StatementBuffer sb, String operation) {
+		if ( outStrP.getType() instanceof PointerType ) {
+			throw new RuntimeException(operation + " output data must be concrete types, not pointers.");
+		}
+		else if ( outStrP.getType() instanceof ArrayType ) {
+			// an array of things to add to the output variables list
+			final int outLen = ((ArrayType) outStrP.getType()).getLength();
+			for (int i=0; i<outLen; i++) {
+				// recursive call on each member of the array
+				getOutputVars(aao.resolve(outStrP,new IntConstant(i)), outVars, saoMap, aao, sb, operation);
+			}
+		} else if ( outStrP.getType() instanceof StructType ) {
+			// first, build the set of struct access operators we need for this struct
+			final StructType stT = (StructType) outStrP.getType();
+			final List<String> sFields = stT.getFields();
+			StructAccessOperator sao;
+			for (int i=0; i<sFields.size(); i++) {
+				// now recursively call on each element of the struct
+				// cache the StructAccessOperators so we don't have to create and destroy a billion of them
+				if ((sao = saoMap.get(sFields.get(i))) == null) {
+					sao = new StructAccessOperator(sFields.get(i));
+					saoMap.put(sFields.get(i),sao);
+				}
+				getOutputVars(sao.resolve(outStrP), outVars, saoMap, aao, sb, operation);
+			}
+		} else if ( outStrP.getType() instanceof SFE.Compiler.ScalarType ) {
+			addStatement(new InputStatement(outStrP), sb);
+			outVars.add(outStrP);
+		} else {
+			throw new RuntimeException(operation + " cannot interpret output variable of type " + outStrP.metaType.toString());
+		}
 	}
 	
 	private static int idFromExpression(SFE.Compiler.Expression expression) {
@@ -1125,179 +1125,179 @@ public class CCompiler {
 			String funcName, int parse_uid, StatementBuffer sb,
 			ArrayList<SFE.Compiler.Expression> args) {
 
-        if (funcName.equals(CBuiltinFunctions.EXO_COMPUTE_NAME)) {
-            // exo_compute(void *inputs[],uint32_t inSizes[], someStruct *output,int cmpNum);
-            // >> input arrays and output array must be ArrayType <<
+		if (funcName.equals(CBuiltinFunctions.EXO_COMPUTE_NAME)) {
+			// exo_compute(void *inputs[],uint32_t inSizes[], someStruct *output,int cmpNum);
+			// >> input arrays and output array must be ArrayType <<
 
-            // we do a lot of checking here.
-            // in principle this could be done in the constructor for the ExoComputeStatement,
-            // but it seems that in the case of the other builtin functions it's done here instead.
-            // We'll stick with that seeming convention.
-            if (args.size() != 4) {
-                throw new RuntimeException("Number of arguments to EXO_COMPUTE must be 4.");
-            }
-            // now let's have a look at these here inputs
-            final SFE.Compiler.Expression inLists = args.get(0);
-            final SFE.Compiler.Expression inLLens = args.get(1);
-            final SFE.Compiler.Expression outStrP = args.get(2);
-            final SFE.Compiler.Expression eCmpNum = args.get(3);
+			// we do a lot of checking here.
+			// in principle this could be done in the constructor for the ExoComputeStatement,
+			// but it seems that in the case of the other builtin functions it's done here instead.
+			// We'll stick with that seeming convention.
+			if (args.size() != 4) {
+				throw new RuntimeException("Number of arguments to EXO_COMPUTE must be 4.");
+			}
+			// now let's have a look at these here inputs
+			final SFE.Compiler.Expression inLists = args.get(0);
+			final SFE.Compiler.Expression inLLens = args.get(1);
+			final SFE.Compiler.Expression outStrP = args.get(2);
+			final SFE.Compiler.Expression eCmpNum = args.get(3);
 
-            if (!(inLists.metaType instanceof ArrayType)) {
-                throw new RuntimeException(
-                        "EXO_COMPUTE first arg must be a statically allocated array " + 
-                        "of pointers to lists of input for the exogenous computation.");
-            }
-            if (! (inLLens.metaType instanceof ArrayType)) {
-                throw new RuntimeException(
-                        "EXO_COMPUTE second arg must be a statically allocated array " + 
-                        "of lengths for the input lists.");
-            }
+			if (!(inLists.metaType instanceof ArrayType)) {
+				throw new RuntimeException(
+						"EXO_COMPUTE first arg must be a statically allocated array " + 
+						"of pointers to lists of input for the exogenous computation.");
+			}
+			if (! (inLLens.metaType instanceof ArrayType)) {
+				throw new RuntimeException(
+						"EXO_COMPUTE second arg must be a statically allocated array " + 
+						"of lengths for the input lists.");
+			}
 
-            final ArrayType atInL = (ArrayType) inLists.metaType;
-            final ArrayType atLnL = (ArrayType) inLLens.metaType;
-            if (atLnL.getLength() != atInL.getLength()) {
-                throw new RuntimeException(
-                        "EXO_COMPUTE first and second args must be arrays of the same " +
-                        "length! First are arg lists, second are lengths of arg lists.");
-            }
+			final ArrayType atInL = (ArrayType) inLists.metaType;
+			final ArrayType atLnL = (ArrayType) inLLens.metaType;
+			if (atLnL.getLength() != atInL.getLength()) {
+				throw new RuntimeException(
+						"EXO_COMPUTE first and second args must be arrays of the same " +
+						"length! First are arg lists, second are lengths of arg lists.");
+			}
 
-            // check the first arguments and save off their contents for creating the ExoComputeStatement instance
-            final List<List<LvalExpression>> inVars = new ArrayList<List<LvalExpression>>(atInL.getLength());
-            final ArrayAccessOperator aao = new ArrayAccessOperator();
-            for (int i=0;i<atInL.getLength();i++) {
-                final IntConstant idx = new IntConstant(i);
+			// check the first arguments and save off their contents for creating the ExoComputeStatement instance
+			final List<List<LvalExpression>> inVars = new ArrayList<List<LvalExpression>>(atInL.getLength());
+			final ArrayAccessOperator aao = new ArrayAccessOperator();
+			for (int i=0;i<atInL.getLength();i++) {
+				final IntConstant idx = new IntConstant(i);
 
-                // get the ith LvalExpression in the 1st arg, which should be a pointer
-                final LvalExpression lPtr = aao.resolve((LvalExpression) inLists,idx);
-                if (!(lPtr.getType() instanceof PointerType)) {
-                    throw new RuntimeException(
-                            "EXO_COMPUTE first arg must be an array of pointers to input lists.");
-                }
+				// get the ith LvalExpression in the 1st arg, which should be a pointer
+				final LvalExpression lPtr = aao.resolve((LvalExpression) inLists,idx);
+				if (!(lPtr.getType() instanceof PointerType)) {
+					throw new RuntimeException(
+							"EXO_COMPUTE first arg must be an array of pointers to input lists.");
+				}
 
-                // input list length for the ith input list
-                final FloatConstant aFlt = FloatConstant.toFloatConstant(
-                        aao.resolve((LvalExpression) inLLens,idx));
-                final BigInteger aNum = aFlt.getNumerator();
-                final BigInteger aDen = aFlt.getDenominator();
-                final int tmpLen = aNum.divide(aDen).intValue();
+				// input list length for the ith input list
+				final FloatConstant aFlt = FloatConstant.toFloatConstant(
+						aao.resolve((LvalExpression) inLLens,idx));
+				final BigInteger aNum = aFlt.getNumerator();
+				final BigInteger aDen = aFlt.getDenominator();
+				final int tmpLen = aNum.divide(aDen).intValue();
 
-                final List<LvalExpression> tmpList = new ArrayList<LvalExpression>(tmpLen);
-                inVars.add(tmpList);
+				final List<LvalExpression> tmpList = new ArrayList<LvalExpression>(tmpLen);
+				inVars.add(tmpList);
 
-                final PointerAccessOperator pao = new PointerAccessOperator();
-                // iterate over length of list, resolving and adding to input list
-                for (int j=0;j<tmpLen;j++) {
-                    final LvalExpression pVal = pao.resolve(
-                                new SFE.Compiler.BinaryOpExpression(new PlusOperator(),lPtr,IntConstant.valueOf(j)));
-                    //System.out.println(pVal.getName().toString());
-                    tmpList.add(pVal);
-                }
-            }
-            
-            // check third argument type: static array of structs
-            if (outStrP.metaType instanceof PointerType) {
-                throw new RuntimeException(
-                        "EXO_COMPUTE third arg must be statically allocated storage " +
-                        "for holding data from the exogenous compuation.");
-            }
-            final List<LvalExpression> outVars = new ArrayList<LvalExpression>();
-            final Map<String, StructAccessOperator> saoMap = new HashMap<String, StructAccessOperator>();
+				final PointerAccessOperator pao = new PointerAccessOperator();
+				// iterate over length of list, resolving and adding to input list
+				for (int j=0;j<tmpLen;j++) {
+					final LvalExpression pVal = pao.resolve(
+								new SFE.Compiler.BinaryOpExpression(new PlusOperator(),lPtr,IntConstant.valueOf(j)));
+					//System.out.println(pVal.getName().toString());
+					tmpList.add(pVal);
+				}
+			}
+			
+			// check third argument type: static array of structs
+			if (outStrP.metaType instanceof PointerType) {
+				throw new RuntimeException(
+						"EXO_COMPUTE third arg must be statically allocated storage " +
+						"for holding data from the exogenous compuation.");
+			}
+			final List<LvalExpression> outVars = new ArrayList<LvalExpression>();
+			final Map<String, StructAccessOperator> saoMap = new HashMap<String, StructAccessOperator>();
 
-            // get the output variables, recursively expanding the structure of each element
-            getOutputVars((LvalExpression) SFE.Compiler.Expression.fullyResolve(outStrP), outVars, saoMap, aao, sb, funcName);
+			// get the output variables, recursively expanding the structure of each element
+			getOutputVars((LvalExpression) SFE.Compiler.Expression.fullyResolve(outStrP), outVars, saoMap, aao, sb, funcName);
 
-            // get the exoId so that we can set the scope name appropriately
-            // exogenous computation number, that is, the identifier for the
-            // backend which code to run on this input (we provide executables
-            // named exo0, exo1, etc.)
-            final int exoId = idFromExpression(eCmpNum);
+			// get the exoId so that we can set the scope name appropriately
+			// exogenous computation number, that is, the identifier for the
+			// backend which code to run on this input (we provide executables
+			// named exo0, exo1, etc.)
+			final int exoId = idFromExpression(eCmpNum);
 
-            /* begin test code
-            // print some information about the arguments
-            System.out.print(Integer.toString(atInL.getLength()) + " " + atInL.getComponentType() + " ");
-            System.out.println(((LvalExpression)inLists).fieldEltAt(0));
-            System.out.print(SFE.Compiler.Expression.fullyResolve(inLLens).getClass().getName().toString() + " ");
-            System.out.println(inLLens.metaType.toString());
-            System.out.print(SFE.Compiler.Expression.fullyResolve(outStrP).getClass().getName().toString() + " ");
-            System.out.println(outStrP.getType().toString());
-            // end test code */
+			/* begin test code
+			// print some information about the arguments
+			System.out.print(Integer.toString(atInL.getLength()) + " " + atInL.getComponentType() + " ");
+			System.out.println(((LvalExpression)inLists).fieldEltAt(0));
+			System.out.print(SFE.Compiler.Expression.fullyResolve(inLLens).getClass().getName().toString() + " ");
+			System.out.println(inLLens.metaType.toString());
+			System.out.print(SFE.Compiler.Expression.fullyResolve(outStrP).getClass().getName().toString() + " ");
+			System.out.println(outStrP.getType().toString());
+			// end test code */
 
-            // don't do this: we only need to create variables for the outputs, and we've done that already above
-            /* create output variables
-            final ArrayType atOut = (ArrayType) outStrP.metaType;
-            final LvalExpression inListsVar = scope.addVar("exo:inLists",new ArrayType(atInL.getComponentType(),atInL.getLength()),false);
-            final LvalExpression inLLensVar = scope.addVar("exo:inLLens",new ArrayType(atLnL.getComponentType(),atLnL.getLength()),false);
-            final LvalExpression outStrPVar = scope.addVar("exo:outStrP",new ArrayType(atOut.getComponentType(),atOut.getLength()),false);
-            final LvalExpression eCmpNumVar = scope.addVar("exo:eCmpNum",new IntType(),false);
-            addStatement(asId(inListsVar,inLists),sb);
-            addStatement(asId(inLLensVar,inLLens),sb);
-            addStatement(asId(outStrPVar,outStrP),sb);
-            addStatement(asId(eCmpNumVar,IntConstant.valueOf(exoId)),sb);
-            // end assign input variables */
+			// don't do this: we only need to create variables for the outputs, and we've done that already above
+			/* create output variables
+			final ArrayType atOut = (ArrayType) outStrP.metaType;
+			final LvalExpression inListsVar = scope.addVar("exo:inLists",new ArrayType(atInL.getComponentType(),atInL.getLength()),false);
+			final LvalExpression inLLensVar = scope.addVar("exo:inLLens",new ArrayType(atLnL.getComponentType(),atLnL.getLength()),false);
+			final LvalExpression outStrPVar = scope.addVar("exo:outStrP",new ArrayType(atOut.getComponentType(),atOut.getLength()),false);
+			final LvalExpression eCmpNumVar = scope.addVar("exo:eCmpNum",new IntType(),false);
+			addStatement(asId(inListsVar,inLists),sb);
+			addStatement(asId(inLLensVar,inLLens),sb);
+			addStatement(asId(outStrPVar,outStrP),sb);
+			addStatement(asId(eCmpNumVar,IntConstant.valueOf(exoId)),sb);
+			// end assign input variables */
 
-            // now we have everything we need to create the ExoComputeStatement
-            addStatement(new ExoComputeStatement(inVars,outVars,exoId), sb);
+			// now we have everything we need to create the ExoComputeStatement
+			addStatement(new ExoComputeStatement(inVars,outVars,exoId), sb);
 
-            return VoidRetVal;
+			return VoidRetVal;
 		}
 		
 		if (funcName.equals(CBuiltinFunctions.EXT_GADGET_NAME)) {
 			// ext_gadget(void *inputs, someStruct *output,int cmpNum);
 			// >> input arrays and output array must be ArrayType <<
 			if (args.size() != 3) {
-                throw new RuntimeException("Number of arguments to EXT_GADGET must be 3.");
-            }
-            // now let's have a look at these here inputs
-            final SFE.Compiler.Expression inList = args.get(0);
-            final SFE.Compiler.Expression outStrP = args.get(1);
-            final SFE.Compiler.Expression eCmpNum = args.get(2);
+				throw new RuntimeException("Number of arguments to EXT_GADGET must be 3.");
+			}
+			// now let's have a look at these here inputs
+			final SFE.Compiler.Expression inList = args.get(0);
+			final SFE.Compiler.Expression outStrP = args.get(1);
+			final SFE.Compiler.Expression eCmpNum = args.get(2);
 
-            // check first argument type: static array of structs
-            if (!(inList.metaType instanceof ArrayType)) {
-                throw new RuntimeException(
-                        "EXT_GADGET first arg must be a statically allocated array " + 
-                        "of pointers to lists of input for the exogenous computation.");
+			// check first argument type: static array of structs
+			if (!(inList.metaType instanceof ArrayType)) {
+				throw new RuntimeException(
+						"EXT_GADGET first arg must be a statically allocated array " + 
+						"of pointers to lists of input for the exogenous computation.");
 			}
 			final ArrayType atInL = (ArrayType) inList.metaType;
 			final List<LvalExpression> inVars = new ArrayList<LvalExpression>(atInL.getLength());
 			final ArrayAccessOperator aao = new ArrayAccessOperator();
 			final PointerAccessOperator pao = new PointerAccessOperator();
 			for (int i=0;i<atInL.getLength();i++) {
-                final IntConstant idx = new IntConstant(i);
+				final IntConstant idx = new IntConstant(i);
 
 				// get the ith LvalExpression in the 1st arg and add it to inputs
 				
-                // iterate over length of list, resolving and adding to input list
-                final LvalExpression lVal = pao.resolve(
-                    new SFE.Compiler.BinaryOpExpression(new PlusOperator(), inList, IntConstant.valueOf(i)));
-                if (!(lVal.getType() instanceof SFE.Compiler.ScalarType)) {
+				// iterate over length of list, resolving and adding to input list
+				final LvalExpression lVal = pao.resolve(
+					new SFE.Compiler.BinaryOpExpression(new PlusOperator(), inList, IntConstant.valueOf(i)));
+				if (!(lVal.getType() instanceof SFE.Compiler.ScalarType)) {
 					throw new RuntimeException(
 						"EXT_GADGET first arg must be an array of scalars.");
 				}
 				inVars.add(lVal);
 			}
-			            
-            // check second argument type: static array of structs
-            if (outStrP.metaType instanceof PointerType) {
-                throw new RuntimeException(
-                        "EXT_GADGET second arg must be statically allocated storage " +
-                        "for holding data from the exogenous compuation.");
-            }
-            final List<LvalExpression> outVars = new ArrayList<LvalExpression>();
+						
+			// check second argument type: static array of structs
+			if (outStrP.metaType instanceof PointerType) {
+				throw new RuntimeException(
+						"EXT_GADGET second arg must be statically allocated storage " +
+						"for holding data from the exogenous compuation.");
+			}
+			final List<LvalExpression> outVars = new ArrayList<LvalExpression>();
 			final Map<String, StructAccessOperator> saoMap = new HashMap<String, StructAccessOperator>();
 
-            // get the output variables, recursively expanding the structure of each element
-            getOutputVars((LvalExpression) SFE.Compiler.Expression.fullyResolve(outStrP), outVars, saoMap, aao, sb, funcName);
+			// get the output variables, recursively expanding the structure of each element
+			getOutputVars((LvalExpression) SFE.Compiler.Expression.fullyResolve(outStrP), outVars, saoMap, aao, sb, funcName);
 
-            // get the gadgetId so that we can set the scope name appropriately
+			// get the gadgetId so that we can set the scope name appropriately
 			// gadget number, that is, the identifier for the backend which code 
 			// to run on this input (we provide executables  named gadget0, gadget1, etc.)
-            int gadgetId = idFromExpression(eCmpNum);
+			int gadgetId = idFromExpression(eCmpNum);
 
-            // now we have everything we need to create the ExtGadgetStatement
-            addStatement(new ExtGadgetStatement(inVars,outVars,gadgetId), sb);
+			// now we have everything we need to create the ExtGadgetStatement
+			addStatement(new ExtGadgetStatement(inVars,outVars,gadgetId), sb);
 
-            return VoidRetVal;
+			return VoidRetVal;
 		}
 
 		// fast_ram implementation.
@@ -1882,13 +1882,13 @@ public class CCompiler {
 			// strValue is wrapped in quotes
 			strValue = strValue.substring(1, strValue.length() - 1);
 
-                        if (strValue.contains("\\")){
-                                System.out.println(
-                                        "WARNING: Backslash in string literal"
-                                        + " not treated as escape character but as"
-                                        + " real backslash: " + strValue
-                                );
-                        }
+						if (strValue.contains("\\")){
+								System.out.println(
+										"WARNING: Backslash in string literal"
+										+ " not treated as escape character but as"
+										+ " real backslash: " + strValue
+								);
+						}
 
 			int N = strValue.length() + 1; // +1 for C null-terminated string
 			LvalExpression[] list = new LvalExpression[N];
@@ -1973,27 +1973,27 @@ public class CCompiler {
 			return toRet;
 		} else if (e.constType.equals("char")) {
 			// strValue is wrapped in single quotes
-                        if (val.length() != 3){
+						if (val.length() != 3){
 				throw new RuntimeException("Char constants must"
-                                + " be a single character long, escape sequences"
-                                + " not supported: "
+								+ " be a single character long, escape sequences"
+								+ " not supported: "
 				+ val);
-                        }
+						}
 
-                        Integer charValue = (int) val.charAt(1);
+						Integer charValue = (int) val.charAt(1);
 
-                        IntConstant toRet = IntConstant.valueOf(charValue);
+						IntConstant toRet = IntConstant.valueOf(charValue);
 
 			Type charType = typetable.get("char");
 
-                        if (TypeHeirarchy.isSubType(toRet.getType(), charType)){
-                                toRet.metaType = charType;
-                        } else {
-                                throw new RuntimeException(
-                                "Assertion error: "
-                                + "Char constant too large?" + val
-                                );
-                        }
+						if (TypeHeirarchy.isSubType(toRet.getType(), charType)){
+								toRet.metaType = charType;
+						} else {
+								throw new RuntimeException(
+								"Assertion error: "
+								+ "Char constant too large?" + val
+								);
+						}
 
 			return toRet;
 		} else {
@@ -2142,25 +2142,25 @@ public class CCompiler {
 	 */
 	private int toInt(Expression k) {
 		if (k instanceof Constant) {
-            final String constStr = ((Constant) k).value.toString();
-            if (constStr.length() >= 2) {
-                switch (constStr.substring(0,2)) {
-                    case "0b":
-                    case "0B":
-                        return Integer.parseInt(constStr.substring(2),2);
-                    case "0x":
-                    case "0X":
-                        return Integer.parseInt(constStr.substring(2),16);
-                    default:
-                        if (constStr.substring(0,1).equals("0")) {
-                            return Integer.parseInt(constStr.substring(1),8);
-                        } else {
-                            return Integer.parseInt(constStr);
-                        }
-                }
-            } else {
-                return Integer.parseInt(constStr);
-            }
+			final String constStr = ((Constant) k).value.toString();
+			if (constStr.length() >= 2) {
+				switch (constStr.substring(0,2)) {
+					case "0b":
+					case "0B":
+						return Integer.parseInt(constStr.substring(2),2);
+					case "0x":
+					case "0X":
+						return Integer.parseInt(constStr.substring(2),16);
+					default:
+						if (constStr.substring(0,1).equals("0")) {
+							return Integer.parseInt(constStr.substring(1),8);
+						} else {
+							return Integer.parseInt(constStr);
+						}
+				}
+			} else {
+				return Integer.parseInt(constStr);
+			}
 		} else if (k instanceof MultiExpression) {
 			MultiExpression m = (MultiExpression) k;
 			if (m.size() == 1) {

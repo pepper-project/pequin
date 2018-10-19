@@ -48,26 +48,26 @@ public class ConstraintWriter {
 		outputVariables = new TreeSet<Integer>();
 		int uniquifier = 0;
 
-        // exoCompute output variables; we use this to hold comments and to check that we've found them all
-        final HashMap<String, Boolean> exOutputs = new HashMap<String, Boolean>();
+		// exoCompute output variables; we use this to hold comments and to check that we've found them all
+		final HashMap<String, Boolean> exOutputs = new HashMap<String, Boolean>();
 
-        // first pass - look for exo_compute/ext_gadget statements and gather up
-        // their output variables so that we can convert them to normal
-        // variables
-        // think: nondeterministic inputs aren't inputs from the circuit POV
-        // but they are behaviorally. So until now we have treated them as
-        // inputs, but now we convert them to normal variables
-        {
-            final BufferedReader br = new BufferedReader(new FileReader(circuitFile));
+		// first pass - look for exo_compute/ext_gadget statements and gather up
+		// their output variables so that we can convert them to normal
+		// variables
+		// think: nondeterministic inputs aren't inputs from the circuit POV
+		// but they are behaviorally. So until now we have treated them as
+		// inputs, but now we convert them to normal variables
+		{
+			final BufferedReader br = new BufferedReader(new FileReader(circuitFile));
 
-            String line = null;
-            while ((line = br.readLine()) != null) {
+			String line = null;
+			while ((line = br.readLine()) != null) {
 				// greater than zero because we know there's a line number and a space first!
 				boolean isExoCompute = line.indexOf(CBuiltinFunctions.EXO_COMPUTE_NAME) > 0;
 				boolean isExtGadget = line.indexOf(CBuiltinFunctions.EXT_GADGET_NAME) > 0;
-                if (isExoCompute || isExtGadget) {
-                    final Scanner in = new Scanner(line);
-                    final String lineNo = in.next();
+				if (isExoCompute || isExtGadget) {
+					final Scanner in = new Scanner(line);
+					final String lineNo = in.next();
 					in.next();  // CBuiltinFunctions.EXO_COMPUTE_NAME or EXT_GADGET_NAME
 					
 					List<String> outVars;
@@ -79,18 +79,18 @@ public class ConstraintWriter {
 						outVars = p.outVarsStr;
 					}
 
-                    for (String s : outVars) {
-                        if (null != exOutputs.get(s)) {
-                            throw new RuntimeException("Error: two EXO_COMPUTE or EXT_GADGET statements write the same variable.");
-                        }
-                        exOutputs.put(s,true);   // for now, just put in a dummy string, we'll fill this in in the next pass
-                    }
-                }
-            }
-        }
+					for (String s : outVars) {
+						if (null != exOutputs.get(s)) {
+							throw new RuntimeException("Error: two EXO_COMPUTE or EXT_GADGET statements write the same variable.");
+						}
+						exOutputs.put(s,true);   // for now, just put in a dummy string, we'll fill this in in the next pass
+					}
+				}
+			}
+		}
 
-        // second pass, input variables
-        // skip exo_compute outputs here; they're not actually circuit inputs
+		// second pass, input variables
+		// skip exo_compute outputs here; they're not actually circuit inputs
 		{
 			BufferedReader bufferedreader = new BufferedReader(new FileReader(
 					circuitFile));
@@ -104,13 +104,13 @@ public class ConstraintWriter {
 				}
 				int varNum = new Integer(firstTerm);
 				if (in.next().equals("input")) {
-                    if (null == exOutputs.get(firstTerm)) {
-                        // normal input variable, since it's not in the exOutputs
-                        String comment = line.split("//")[1];
-                        inputVariables.put(varNum, comment);
-                        String variableName = "I" + varNum;
-                        out.println(variableName + " //" + comment);
-                    }
+					if (null == exOutputs.get(firstTerm)) {
+						// normal input variable, since it's not in the exOutputs
+						String comment = line.split("//")[1];
+						inputVariables.put(varNum, comment);
+						String variableName = "I" + varNum;
+						out.println(variableName + " //" + comment);
+					}
 				}
 			}
 			out.println("END_INPUT");
@@ -119,7 +119,7 @@ public class ConstraintWriter {
 
 		out.println();
 
-        // third pass - output variables
+		// third pass - output variables
 		{
 			BufferedReader bufferedreader = new BufferedReader(new FileReader(
 					circuitFile));
@@ -151,7 +151,7 @@ public class ConstraintWriter {
 
 		out.println();
 
-        // fourth pass - internal variables
+		// fourth pass - internal variables
 		{
 			BufferedReader bufferedreader = new BufferedReader(new FileReader(
 					circuitFile));
@@ -238,21 +238,21 @@ public class ConstraintWriter {
 					// Do nothing.
 				} else {
 					if (!inputVariables.containsKey(varNum) && !outputVariables.contains(varNum)) {
-                        // this might fail silently, but that's OK, we check later that we got them all
-                        exOutputs.remove(firstTerm);
+						// this might fail silently, but that's OK, we check later that we got them all
+						exOutputs.remove(firstTerm);
 
 						String variableName = "V" + varNum;
 						out.println(variableName + " //" + line.split("//")[1]);
 					} else {
-                        // input and output variables already taken care of
+						// input and output variables already taken care of
 					}
 				}
 			}
 			out.println("END_VARIABLES");
 			bufferedreader.close();
 
-            assert exOutputs.size() == 0 :
-                "exOutputs has remaining elements, indicating that we failed to add all its contents to the VARIABLES list.";
+			assert exOutputs.size() == 0 :
+				"exOutputs has remaining elements, indicating that we failed to add all its contents to the VARIABLES list.";
 
 			// Print to stdout the op counts:
 			for (Entry<String, Integer> entry : operation_counts.entrySet()) {
@@ -294,7 +294,7 @@ public class ConstraintWriter {
 					}
 					out.println();
 				} else {
-                    compileConstraintsLine(line);
+					compileConstraintsLine(line);
 				}
 			}
 			out.println("END_CONSTRAINTS");
@@ -352,7 +352,7 @@ public class ConstraintWriter {
 		Scanner in = new Scanner(line);
 
 		in = new Scanner(line);
-        String varNumStr = in.next();
+		String varNumStr = in.next();
 		int varNum = Integer.parseInt(varNumStr);
 		String variableName = getConstraintVarName(varNum);
 		String type = in.next();
@@ -371,14 +371,14 @@ public class ConstraintWriter {
 				// } else if (gateType.equals("getdb")){
 				// compileGetDbConstraint(variableName, in);
 			} else {
-                // first check if this poly constraint is one of the spurious
-                // assignments we inserted into the circuit in order to make a
-                // placeholder variable for the exo_compute output
-                compilePolyConstraint(variableName, in);
+				// first check if this poly constraint is one of the spurious
+				// assignments we inserted into the circuit in order to make a
+				// placeholder variable for the exo_compute output
+				compilePolyConstraint(variableName, in);
 			}
 		} else if (type.equals("split")) {
 			compileSplitConstraint(in);
-        } else if (type.equals(CBuiltinFunctions.EXO_COMPUTE_NAME)) {
+		} else if (type.equals(CBuiltinFunctions.EXO_COMPUTE_NAME)) {
 			compileExoComputeConstraint(in);
 		} else if (type.equals(CBuiltinFunctions.EXT_GADGET_NAME)) {
 			compileExtGadgetConstraint(in);
@@ -621,22 +621,22 @@ public class ConstraintWriter {
 				+ addrs + " NUM_Y " + num_bits + " Y " + value);
 	}
 
-    private void compileExoComputeConstraint(Scanner in) {
-        // parse the line
-        final CompiledStatement.ParsedExoCompute p = CompiledStatement.exoComputeParser(in);
+	private void compileExoComputeConstraint(Scanner in) {
+		// parse the line
+		final CompiledStatement.ParsedExoCompute p = CompiledStatement.exoComputeParser(in);
 
-        if (in.hasNextLine()) {
-            in.nextLine();
-        }
+		if (in.hasNextLine()) {
+			in.nextLine();
+		}
 
-        // then just print the same damn thing out again
-        out.print(CBuiltinFunctions.EXO_COMPUTE_NAME.toUpperCase() + " EXOID " + Integer.toString(p.exoId) + " INPUTS [ ");
-        compileLL(p.inVarsStr);
+		// then just print the same damn thing out again
+		out.print(CBuiltinFunctions.EXO_COMPUTE_NAME.toUpperCase() + " EXOID " + Integer.toString(p.exoId) + " INPUTS [ ");
+		compileLL(p.inVarsStr);
 
-        out.print("] OUTPUTS [ ");
-        compileL(p.outVarsStr);
+		out.print("] OUTPUTS [ ");
+		compileL(p.outVarsStr);
 
-        out.println("]");
+		out.println("]");
 	}
 	
 	private void compileExtGadgetConstraint(Scanner in) {
@@ -648,27 +648,27 @@ public class ConstraintWriter {
 		}
 
 		out.print(CBuiltinFunctions.EXT_GADGET_NAME.toUpperCase() + " GADGETID " + Integer.toString(p.gadgetId) + " INPUTS [ ");
-        compileL(p.inVarsStr);
+		compileL(p.inVarsStr);
 
-        out.print("] OUTPUTS [ ");
-        compileL(p.outVarsStr);
+		out.print("] OUTPUTS [ ");
+		compileL(p.outVarsStr);
 
 		out.println("] INTERMEDIATE " + p.intermediateVarCount + " OFFSET " + p.intermediateVarOffset);
 	}
 
-    private void compileL(List<String> inL) {
-        for (String s : inL) {
-            out.print(getConstraintVarName(Integer.parseInt(s)) + " ");
-        }
-    }
+	private void compileL(List<String> inL) {
+		for (String s : inL) {
+			out.print(getConstraintVarName(Integer.parseInt(s)) + " ");
+		}
+	}
 
-    private void compileLL(List<List<String>> inL) {
-        for (List<String> thisL : inL) {
-            out.print("[ ");
-            compileL(thisL);
-            out.print("] ");
-        }
-    }
+	private void compileLL(List<List<String>> inL) {
+		for (List<String> thisL : inL) {
+			out.print("[ ");
+			compileL(thisL);
+			out.print("] ");
+		}
+	}
 
 	private void compileRAMPutEnhancedConstraint(Scanner in) {
 		String retVar = getConstraintTerm(in.next());
