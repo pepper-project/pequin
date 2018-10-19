@@ -944,7 +944,7 @@ void ComputationProver::compute_printf(FILE* pws_file) {
   std::string format;
   while(true){
     next_token_or_error(pws_file, cmds);
-    if (strcmp(cmds, "NUM_X")) {
+    if (strcmp(cmds, "NUM_X") == 0) {
       break;
     }
     format += cmds;
@@ -970,6 +970,7 @@ void ComputationProver::compute_printf(FILE* pws_file) {
   gmp_printf("PRINTF in computation_p %d:\n", num_args);
   gmp_printf(format.c_str(), args[0], args[1], args[2], args[3],
   args[4], args[5], args[6], args[7], args[8], args[9]);
+  gmp_printf("\n");
 }
 
 void ComputationProver::compute_genericget(FILE* pws_file) {
