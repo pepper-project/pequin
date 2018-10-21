@@ -46,32 +46,41 @@ void run_setup(int num_constraints, int num_inputs,
     Amat >> Aj;
     Amat >> Acoef;
 
+    if (mpz_cmpabs(Acoef, p) > 0) {
+        gmp_printf("WARNING: Coefficient larger than prime (%Zd > %Zd).\n", Acoef, p);
+        mpz_mod(Acoef, Acoef, p);
+    }
     if (mpz_sgn(Acoef) == -1) {
         mpz_add(Acoef, p, Acoef);
     }
-    mpz_mod(Acoef, Acoef, p);
     
     //    std::cout << Ai << " " << Aj << " " << Acoef << std::std::endl;
 
     Bmat >> Bi;
     Bmat >> Bj;
     Bmat >> Bcoef;
+    if (mpz_cmpabs(Bcoef, p) > 0) {
+        gmp_printf("WARNING: Coefficient larger than prime (%Zd > %Zd).\n", Bcoef, p);
+        mpz_mod(Bcoef, Bcoef, p);
+    }
     if (mpz_sgn(Bcoef) == -1) {
         mpz_add(Bcoef, p, Bcoef);
     }
-    mpz_mod(Bcoef, Bcoef, p);
     
     Cmat >> Ci;
     Cmat >> Cj;
     Cmat >> Ccoef;
 
+    if (mpz_cmpabs(Ccoef, p) > 0) {
+        gmp_printf("WARNING: Coefficient larger than prime (%Zd > %Zd).\n", Ccoef, p);
+        mpz_mod(Ccoef, Ccoef, p);
+    }
     if (mpz_sgn(Ccoef) == -1) {
         mpz_mul_si(Ccoef, Ccoef, -1);
     } else if(mpz_sgn(Ccoef) == 1) {
         mpz_mul_si(Ccoef, Ccoef, -1);
         mpz_add(Ccoef, p, Ccoef);
     }
-    mpz_mod(Ccoef, Ccoef, p);
     
     int num_intermediate_vars = num_vars;
     int num_inputs_outputs = num_inputs + num_outputs;
@@ -97,10 +106,13 @@ void run_setup(int num_constraints, int num_inputs,
             Amat >> Ai;
             Amat >> Aj;
             Amat >> Acoef; 
+            if (mpz_cmpabs(Acoef, p) > 0) {
+                gmp_printf("WARNING: Coefficient larger than prime (%Zd > %Zd).\n", Acoef, p);
+                mpz_mod(Acoef, Acoef, p);
+            }
             if (mpz_sgn(Acoef) == -1) {
                 mpz_add(Acoef, p, Acoef);
             }
-            mpz_mod(Acoef, Acoef, p);
         }
         
         while(Bj == currentconstraint && Bmat) {
@@ -118,10 +130,13 @@ void run_setup(int num_constraints, int num_inputs,
             Bmat >> Bi;
             Bmat >> Bj;
             Bmat >> Bcoef;
+            if (mpz_cmpabs(Bcoef, p) > 0) {
+                gmp_printf("WARNING: Coefficient larger than prime (%Zd > %Zd).\n", Bcoef, p);
+                mpz_mod(Bcoef, Bcoef, p);
+            }
             if (mpz_sgn(Bcoef) == -1) {
                 mpz_add(Bcoef, p, Bcoef);
             }
-            mpz_mod(Bcoef, Bcoef, p);
         }
         
         while(Cj == currentconstraint && Cmat) {
@@ -142,13 +157,16 @@ void run_setup(int num_constraints, int num_inputs,
             Cmat >> Ci;
             Cmat >> Cj;
             Cmat >> Ccoef;
+            if (mpz_cmpabs(Ccoef, p) > 0) {
+                gmp_printf("WARNING: Coefficient larger than prime (%Zd > %Zd).\n", Ccoef, p);
+                mpz_mod(Ccoef, Ccoef, p);
+            }
             if (mpz_sgn(Ccoef) == -1) {
                 mpz_mul_si(Ccoef, Ccoef, -1);
             } else if (mpz_sgn(Ccoef) == 1) {
                 mpz_mul_si(Ccoef, Ccoef, -1);
                 mpz_add(Ccoef, p, Ccoef);
             }
-            mpz_mod(Ccoef, Ccoef, p);
         }
         
         q.add_constraint(libsnark::r1cs_constraint<FieldT>(A, B, C));
