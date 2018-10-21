@@ -1,9 +1,9 @@
 package SFE.Compiler;
 
 import java.io.PrintWriter;
-import java.util.ArrayList;
 import java.util.List;
 
+import SFE.Compiler.util.ExpressionIterator;
 import ccomp.CBuiltinFunctions;
 
 public class ExoComputeStatement extends StatementWithOutputLine implements OutputWriter {
@@ -29,23 +29,23 @@ public class ExoComputeStatement extends StatementWithOutputLine implements Outp
 
     public Statement toSLPTCircuit(Object obj) {
         // resolve input and output variables to their corresponding field element
-        iterLL(inVars,circuitIter);
-        iterL(outVars,circuitIter);
+        ExpressionIterator.iterLL(inVars,ExpressionIterator.circuitIter());
+        ExpressionIterator.iterL(outVars,ExpressionIterator.circuitIter());
         return this;
     }
 
     public void toAssignmentStatements(StatementBuffer assignments) {
         // change references
-        iterLL(inVars,changeRefIter);
-        iterL(outVars,changeRefIter);
+        ExpressionIterator.iterLL(inVars,ExpressionIterator.changeRefIter());
+        ExpressionIterator.iterL(outVars,ExpressionIterator.changeRefIter());
 
         toAssignmentStatements_NoChangeRef(assignments);
     }
 
     public void toAssignmentStatements_NoChangeRef(StatementBuffer assignments) {
         // make sure variables have references
-        iterLL(inVars,addRefIter);
-        iterL(outVars,addRefIter);
+        ExpressionIterator.iterLL(inVars,ExpressionIterator.addRefIter());
+        ExpressionIterator.iterL(outVars,ExpressionIterator.addRefIter());
 
         outputLine = Program.getLineNumber();
         assignments.add(this);
@@ -63,11 +63,13 @@ public class ExoComputeStatement extends StatementWithOutputLine implements Outp
                       " EXOID " + Integer.toString(compNum) + " INPUTS [");
 
         // input variables
-        iterLL(inVars,toCircuitIter,toCBrkIter);
+        ExpressionIterator.iterLL(
+            inVars,ExpressionIterator.toCircuitIter(circuit),ExpressionIterator.toCBrkIter(this.circuit)
+        );
         circuit.print("] ] OUTPUTS [ ");
 
         // output variables
-        iterL(outVars,toCircuitIter);
+        ExpressionIterator.iterL(outVars,ExpressionIterator.toCircuitIter(circuit));
         circuit.print("]");
 
         circuit.println("\t// " + this.toString());
@@ -78,63 +80,4 @@ public class ExoComputeStatement extends StatementWithOutputLine implements Outp
                " inVectors=" + inVars.size() +
                " outVars=" + outVars.size();
     }
-
-
-// ** iterator infrastructure for input and output variables **
-    // iterate over the list of lists, doing... something.
-    private void iterL(List<LvalExpression> thisL, IterLLCall illfn) {
-        for (int i=0; i<thisL.size(); i++) {
-            illfn.call(thisL,i);
-        }
-    }
-    private void iterLL(List<List<LvalExpression>> lls, IterLLCall illfn, IterLLCall...repfns) {
-        int j=0;
-        for (List<LvalExpression> thisL : lls) {
-            // pre-walk call
-            if (repfns.length > 0) {
-                repfns[0].call(thisL,j++);
-            }
-
-            // per-element iter call
-            iterL(thisL,illfn);
-        }
-    }
-
-    // lack of lambdas brings us to this syntactic noise. Oh well.
-    private abstract class IterLLCall { abstract void call (List<LvalExpression> thisL, int i); }
-
-    // get the field element in the toSLPTCircuit pass
-    private IterLLCall circuitIter = new IterLLCall() {
-        void call (List<LvalExpression> thisL, int i) { thisL.set(i,thisL.get(i).fieldEltAt(0)); }
-    };
-
-    // change reference in the toAssignmentStatements pass
-    private IterLLCall changeRefIter = new IterLLCall() {
-        void call (List<LvalExpression> thisL, int i) { thisL.set(i,thisL.get(i).changeReference(Function.getVars())); }
-    };
-
-    // reference for each variable during the toAssignmentStatements pass
-    private IterLLCall addRefIter = new IterLLCall() {
-        void call (List<LvalExpression> thisL, int i) { thisL.get(i).addReference(); }
-    };
-
-    // call toCircuit on each LvalExpression
-    private IterLLCall toCircuitIter = new IterLLCall() {
-        void call (List<LvalExpression> thisL, int i) {
-            thisL.get(i).toCircuit(null, ExoComputeStatement.this.circuit);
-            ExoComputeStatement.this.circuit.print(" ");
-        }
-    };
-
-    // bracketing utility
-    private IterLLCall toCBrkIter = new IterLLCall() {
-        void call (List<LvalExpression> thisL, int j) {
-            // close the previous bracket unless we're on the first iteration
-            if (0 != j) {
-                ExoComputeStatement.this.circuit.print("]");
-            }
-
-            ExoComputeStatement.this.circuit.print(" [ ");
-        }
-    };
 }
