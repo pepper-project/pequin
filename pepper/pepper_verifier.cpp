@@ -20,14 +20,15 @@
 
 void print_usage(char* argv[]) {
     std::cout << "usage: " << std::endl <<
-        "(1) " << argv[0] << " setup <verification key file> <proving key file>" << std::endl <<
+        "(1) " << argv[0] << " setup <verification key file> <proving key file> [<unprocessed verification key file>]" << std::endl <<
         "(2) " << argv[0] << " gen_input <inputs file" << std::endl <<
         "(3) " << argv[0] << " verify <verification key file> <inputs file> <outputs file> <proof file>" << std::endl;
 }
 
 void run_setup(int num_constraints, int num_inputs,
                int num_outputs, int num_vars, mpz_t p,
-               string vkey_file, string pkey_file) {
+               string vkey_file, string pkey_file, 
+               string unprocessed_vkey_file) {
     
     std::ifstream Amat("./bin/" + std::string(NAME) + ".qap.matrix_a");
     std::ifstream Bmat("./bin/" + std::string(NAME) + ".qap.matrix_b");
@@ -190,6 +191,11 @@ void run_setup(int num_constraints, int num_inputs,
     pkey << keypair.pk;
     pkey.close(); vkey.close();
 
+    if (unprocessed_vkey_file.length() > 0) {
+        std::ofstream unprocessed_vkey(unprocessed_vkey_file);
+        unprocessed_vkey << keypair.vk;
+        unprocessed_vkey.close();
+    }
 }
 
 void verify (string verification_key_fn, string inputs_fn, string outputs_fn,
@@ -270,15 +276,19 @@ int main (int argc, char* argv[]) {
 
 
     if (!strcmp(argv[1], "setup")) {
-        if (argc != 4) {
+        if (argc != 4 && argc != 5) {
             print_usage(argv);
             exit(1);
         }
         string verification_key_fn = std::string(v_dir) + argv[2];
         string proving_key_fn = std::string(p_dir) + argv[3];
+        string unprocessed_vkey_fn;
+        if (argc == 5) {
+            unprocessed_vkey_fn = std::string(v_dir) + argv[4];
+        }
         std::cout << "Creating proving/verification keys, will write to " << verification_key_fn
                   << ", " << proving_key_fn << std::endl;
-        run_setup(p.n_constraints, p.n_inputs, p.n_outputs, p.n_vars, prime, verification_key_fn, proving_key_fn);
+        run_setup(p.n_constraints, p.n_inputs, p.n_outputs, p.n_vars, prime, verification_key_fn, proving_key_fn, unprocessed_vkey_fn);
     }
     else if (!strcmp(argv[1], "gen_input")) {
         if (argc != 3) {
