@@ -20,14 +20,15 @@
 
 void print_usage(char* argv[]) {
     std::cout << "usage: " << std::endl <<
-        "(1) " << argv[0] << " setup <verification key file> <proving key file>" << std::endl <<
+        "(1) " << argv[0] << " setup <verification key file> <proving key file> [<unprocessed verification key file>]" << std::endl <<
         "(2) " << argv[0] << " gen_input <inputs file" << std::endl <<
         "(3) " << argv[0] << " verify <verification key file> <inputs file> <outputs file> <proof file>" << std::endl;
 }
 
 void run_setup(int num_constraints, int num_inputs,
                int num_outputs, int num_vars, mpz_t p,
-               string vkey_file, string pkey_file) {
+               string vkey_file, string pkey_file, 
+               string unprocessed_vkey_file) {
     
     std::ifstream Amat("./bin/" + std::string(NAME) + ".qap.matrix_a");
     std::ifstream Bmat("./bin/" + std::string(NAME) + ".qap.matrix_b");
@@ -46,29 +47,41 @@ void run_setup(int num_constraints, int num_inputs,
     Amat >> Aj;
     Amat >> Acoef;
 
-    if (mpz_sgn(Acoef) == -1)
+    if (mpz_cmpabs(Acoef, p) > 0) {
+        gmp_printf("WARNING: Coefficient larger than prime (%Zd > %Zd).\n", Acoef, p);
+        mpz_mod(Acoef, Acoef, p);
+    }
+    if (mpz_sgn(Acoef) == -1) {
         mpz_add(Acoef, p, Acoef);
+    }
     
     //    std::cout << Ai << " " << Aj << " " << Acoef << std::std::endl;
 
     Bmat >> Bi;
     Bmat >> Bj;
     Bmat >> Bcoef;
-    if (mpz_sgn(Bcoef) == -1)
+    if (mpz_cmpabs(Bcoef, p) > 0) {
+        gmp_printf("WARNING: Coefficient larger than prime (%Zd > %Zd).\n", Bcoef, p);
+        mpz_mod(Bcoef, Bcoef, p);
+    }
+    if (mpz_sgn(Bcoef) == -1) {
         mpz_add(Bcoef, p, Bcoef);
+    }
     
     Cmat >> Ci;
     Cmat >> Cj;
     Cmat >> Ccoef;
 
-    if (mpz_sgn(Ccoef) == -1)
+    if (mpz_cmpabs(Ccoef, p) > 0) {
+        gmp_printf("WARNING: Coefficient larger than prime (%Zd > %Zd).\n", Ccoef, p);
+        mpz_mod(Ccoef, Ccoef, p);
+    }
+    if (mpz_sgn(Ccoef) == -1) {
         mpz_mul_si(Ccoef, Ccoef, -1);
-
-    else if(mpz_sgn(Ccoef) == 1)
-        {
-            mpz_mul_si(Ccoef, Ccoef, -1);
-            mpz_add(Ccoef, p, Ccoef);
-        }
+    } else if(mpz_sgn(Ccoef) == 1) {
+        mpz_mul_si(Ccoef, Ccoef, -1);
+        mpz_add(Ccoef, p, Ccoef);
+    }
     
     int num_intermediate_vars = num_vars;
     int num_inputs_outputs = num_inputs + num_outputs;
@@ -76,77 +89,91 @@ void run_setup(int num_constraints, int num_inputs,
     q.primary_input_size = num_inputs_outputs;
     q.auxiliary_input_size = num_intermediate_vars;
     
-    for (int currentconstraint = 1; currentconstraint <= num_constraints; currentconstraint++)
-        {
-            libsnark::linear_combination<FieldT> A, B, C;
+    for (int currentconstraint = 1; currentconstraint <= num_constraints; currentconstraint++) {
+        libsnark::linear_combination<FieldT> A, B, C;
+        
+        while(Aj == currentconstraint && Amat) {                  
+            if (Ai <= num_intermediate_vars && Ai != 0) {
+                Ai += num_inputs_outputs;
+            } else if (Ai > num_intermediate_vars) {
+                Ai -= num_intermediate_vars;
+            }
             
-            while(Aj == currentconstraint && Amat)
-                {                  
-                    if (Ai <= num_intermediate_vars && Ai != 0)
-                        Ai += num_inputs_outputs;
-                    else if (Ai > num_intermediate_vars)
-                        Ai -= num_intermediate_vars;
-                    
-                    FieldT AcoefT(Acoef);
-                    A.add_term(Ai, AcoefT);
-                    if(!Amat)
-                        break;
-                    Amat >> Ai;
-                    Amat >> Aj;
-                    Amat >> Acoef; 
-                    if (mpz_sgn(Acoef) == -1)
-                        mpz_add(Acoef, p, Acoef);
-                }
-            
-            while(Bj == currentconstraint && Bmat)
-                {
-                    if (Bi <= num_intermediate_vars && Bi != 0)
-                        Bi += num_inputs_outputs;
-                    else if (Bi > num_intermediate_vars)
-                        Bi -= num_intermediate_vars;
-                    //         std::cout << Bi << " " << Bj << " " << Bcoef << std::std::endl;
-                    FieldT BcoefT(Bcoef);
-                    B.add_term(Bi, BcoefT);
-                    if (!Bmat)
-                        break;
-                    Bmat >> Bi;
-                    Bmat >> Bj;
-                    Bmat >> Bcoef;
-                    if (mpz_sgn(Bcoef) == -1)
-                        mpz_add(Bcoef, p, Bcoef);
-                }
-            
-            while(Cj == currentconstraint && Cmat)
-                {
-                    if (Ci <= num_intermediate_vars && Ci != 0)
-                        Ci += num_inputs_outputs;
-                    else if (Ci > num_intermediate_vars)
-                    Ci -= num_intermediate_vars;
-                    //Libsnark constraints are A*B = C, vs. A*B - C = 0 for Zaatar.
-                    //Which is why the C coefficient is negated. 
-                    
-                    // std::cout << Ci << " " << Cj << " " << Ccoef << std::std::endl;
-                    FieldT CcoefT(Ccoef);
-                    C.add_term(Ci, CcoefT);
-                    if (!Cmat)
-                        break;
-                    Cmat >> Ci;
-                    Cmat >> Cj;
-                    Cmat >> Ccoef;
-                    if (mpz_sgn(Ccoef) == -1)
-                        mpz_mul_si(Ccoef, Ccoef, -1);
-                    else if (mpz_sgn(Ccoef) == 1)
-                        {
-                            mpz_mul_si(Ccoef, Ccoef, -1);
-                            mpz_add(Ccoef, p, Ccoef);
-                        }
-		  
-                }
-            
-            q.add_constraint(libsnark::r1cs_constraint<FieldT>(A, B, C));
-            
-            //dump_constraint(r1cs_constraint<FieldT>(A, B, C), va, variable_annotations);
+            FieldT AcoefT(Acoef);
+            A.add_term(Ai, AcoefT);
+            if(!Amat) {
+                break;
+            }
+            Amat >> Ai;
+            Amat >> Aj;
+            Amat >> Acoef; 
+            if (mpz_cmpabs(Acoef, p) > 0) {
+                gmp_printf("WARNING: Coefficient larger than prime (%Zd > %Zd).\n", Acoef, p);
+                mpz_mod(Acoef, Acoef, p);
+            }
+            if (mpz_sgn(Acoef) == -1) {
+                mpz_add(Acoef, p, Acoef);
+            }
         }
+        
+        while(Bj == currentconstraint && Bmat) {
+            if (Bi <= num_intermediate_vars && Bi != 0) {
+                Bi += num_inputs_outputs;
+            } else if (Bi > num_intermediate_vars) {
+                Bi -= num_intermediate_vars;
+            }
+            //         std::cout << Bi << " " << Bj << " " << Bcoef << std::std::endl;
+            FieldT BcoefT(Bcoef);
+            B.add_term(Bi, BcoefT);
+            if (!Bmat) {
+                break;
+            }
+            Bmat >> Bi;
+            Bmat >> Bj;
+            Bmat >> Bcoef;
+            if (mpz_cmpabs(Bcoef, p) > 0) {
+                gmp_printf("WARNING: Coefficient larger than prime (%Zd > %Zd).\n", Bcoef, p);
+                mpz_mod(Bcoef, Bcoef, p);
+            }
+            if (mpz_sgn(Bcoef) == -1) {
+                mpz_add(Bcoef, p, Bcoef);
+            }
+        }
+        
+        while(Cj == currentconstraint && Cmat) {
+            if (Ci <= num_intermediate_vars && Ci != 0) {
+                Ci += num_inputs_outputs;
+            } else if (Ci > num_intermediate_vars) {
+                Ci -= num_intermediate_vars;
+            }
+            //Libsnark constraints are A*B = C, vs. A*B - C = 0 for Zaatar.
+            //Which is why the C coefficient is negated. 
+            
+            // std::cout << Ci << " " << Cj << " " << Ccoef << std::std::endl;
+            FieldT CcoefT(Ccoef);
+            C.add_term(Ci, CcoefT);
+            if (!Cmat) {
+                break;
+            }
+            Cmat >> Ci;
+            Cmat >> Cj;
+            Cmat >> Ccoef;
+            if (mpz_cmpabs(Ccoef, p) > 0) {
+                gmp_printf("WARNING: Coefficient larger than prime (%Zd > %Zd).\n", Ccoef, p);
+                mpz_mod(Ccoef, Ccoef, p);
+            }
+            if (mpz_sgn(Ccoef) == -1) {
+                mpz_mul_si(Ccoef, Ccoef, -1);
+            } else if (mpz_sgn(Ccoef) == 1) {
+                mpz_mul_si(Ccoef, Ccoef, -1);
+                mpz_add(Ccoef, p, Ccoef);
+            }
+        }
+        
+        q.add_constraint(libsnark::r1cs_constraint<FieldT>(A, B, C));
+        
+        //dump_constraint(r1cs_constraint<FieldT>(A, B, C), va, variable_annotations);
+    }
     
     Amat.close();
     Bmat.close();
@@ -164,6 +191,11 @@ void run_setup(int num_constraints, int num_inputs,
     pkey << keypair.pk;
     pkey.close(); vkey.close();
 
+    if (unprocessed_vkey_file.length() > 0) {
+        std::ofstream unprocessed_vkey(unprocessed_vkey_file);
+        unprocessed_vkey << keypair.vk;
+        unprocessed_vkey.close();
+    }
 }
 
 void verify (string verification_key_fn, string inputs_fn, string outputs_fn,
@@ -244,15 +276,19 @@ int main (int argc, char* argv[]) {
 
 
     if (!strcmp(argv[1], "setup")) {
-        if (argc != 4) {
+        if (argc != 4 && argc != 5) {
             print_usage(argv);
             exit(1);
         }
         string verification_key_fn = std::string(v_dir) + argv[2];
         string proving_key_fn = std::string(p_dir) + argv[3];
+        string unprocessed_vkey_fn;
+        if (argc == 5) {
+            unprocessed_vkey_fn = std::string(v_dir) + argv[4];
+        }
         std::cout << "Creating proving/verification keys, will write to " << verification_key_fn
                   << ", " << proving_key_fn << std::endl;
-        run_setup(p.n_constraints, p.n_inputs, p.n_outputs, p.n_vars, prime, verification_key_fn, proving_key_fn);
+        run_setup(p.n_constraints, p.n_inputs, p.n_outputs, p.n_vars, prime, verification_key_fn, proving_key_fn, unprocessed_vkey_fn);
     }
     else if (!strcmp(argv[1], "gen_input")) {
         if (argc != 3) {

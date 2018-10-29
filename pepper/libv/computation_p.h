@@ -55,8 +55,9 @@ protected:
     void compute_db_get_sibling_hash(FILE* pws_file);
 
     void compute_exo_compute(FILE *pws_file);
-    void compute_exo_compute_getLL(std::vector< std::vector<std::string> > &inLL, FILE *pws_file, char *buf);
-    void compute_exo_compute_getL (std::vector<std::string> &inL, FILE *pws_file, char *buf);
+    void compute_ext_gadget(FILE *pws_file);
+    void getLL(std::vector< std::vector<std::string> > &inLL, FILE *pws_file, char *buf);
+    void getL (std::vector<std::string> &inL, FILE *pws_file, char *buf);
 
     void compute_fast_ramget(FILE* pws_file);
     void compute_fast_ramput(FILE* pws_file);

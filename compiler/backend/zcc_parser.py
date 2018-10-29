@@ -9,6 +9,8 @@ import zcc_parser_static
 import collections
 import var_table
 import merkle
+import subprocess
+import json
 
 import wak
 
@@ -986,7 +988,7 @@ def parse_exo_compute_spec_line(terms):
   inVars = []
 
   while True:
-    (cTok,outArr) = parse_exo_compute_array(terms,cTok)
+    (cTok,outArr) = parse_array(terms,cTok)
     inVars.append(outArr)
 
     if terms[cTok] == "]":
@@ -996,12 +998,51 @@ def parse_exo_compute_spec_line(terms):
   assert terms[cTok] == "OUTPUTS"
   cTok += 1
 
-  (cTok,outVars) = parse_exo_compute_array(terms,cTok)
+  (cTok,outVars) = parse_array(terms,cTok)
 
   return (inVars,outVars,exoId)
 
+def parse_ext_gadget_spec_line(terms):
+  cTok = 0
+  assert terms[cTok] == "EXT_GADGET"
+  cTok += 1
+
+  assert terms[cTok] == "GADGETID"
+  cTok += 1
+
+  gadgetId = int(terms[cTok])
+  cTok += 1
+
+  assert terms[cTok] == "INPUTS"
+  cTok += 1
+
+  (cTok,inVars) = parse_array(terms,cTok)
+  
+  assert terms[cTok] == "OUTPUTS"
+  cTok += 1
+
+  (cTok,outVars) = parse_array(terms,cTok)
+  
+  assert terms[cTok] == "INTERMEDIATE"
+  cTok += 1
+  numIntermediate = int(terms[cTok])
+  cTok += 1
+
+  assert terms[cTok] == "OFFSET"
+  cTok += 1
+  offset = long(terms[cTok])
+  
+  intermediateVars = map(lambda i: "G{}V{}".format(gadgetId, i), range(offset, offset+numIntermediate))
+
+  return (inVars,outVars,intermediateVars,gadgetId)
+
+def parse_ext_gadget_pws_line(line):
+  terms = collections.deque(line.split())
+  (inVars,outVars,intermediateVars,gadgetId) = parse_ext_gadget_spec_line(terms)
+  return (inVars + outVars + intermediateVars, gadgetId)
+
 # parse a single array, like [ a b c d ]
-def parse_exo_compute_array(terms,cTok):
+def parse_array(terms,cTok):
   theArr = []
 
   assert terms[cTok] == "["
@@ -1509,7 +1550,6 @@ metric_num_Nz(C) %s %d
 def convert_to_compressed_polynomial(j, polynomial, shuffled_indices):
 #   num_inputs = input_vars.num_vars #count_lines(text, INPUT_TAG)
 #   num_outputs = output_vars.num_vars #count_lines(text, OUTPUT_TAG)
-  num_vars = variables.num_vars # count_lines(text, VARIABLES_TAG)
 
   i = -1
   coefficient = 0
@@ -1530,16 +1570,20 @@ def convert_to_compressed_polynomial(j, polynomial, shuffled_indices):
         coefficient = term
     else:
       (coefficient, variable) = term.split(" * ")
-      index = int(variable[1:]) #remove the first character and store in index
-      if (variable.startswith("V")):
-        i = 1 + shuffled_indices[index]
-      elif (variable.startswith("I")):
-        i = 1 + num_vars + index
-      elif (variable.startswith("O")):
-        i = 1 + num_vars + index
-
+      i = convert_variable_to_index(variable, shuffled_indices)
     entries += ["%d %d %s\n" % (i, j, coefficient)]
   return "".join(entries)
+
+def convert_variable_to_index(varName, shuffled_indices):
+  num_vars = variables.num_vars # count_lines(text, VARIABLES_TAG)
+  originalIndex = int(varName[1:]) #remove the first character and store in index
+  if (varName.startswith("V")):
+    index = 1 + shuffled_indices[originalIndex]
+  elif (varName.startswith("I")):
+    index = 1 + num_vars + originalIndex
+  elif (varName.startswith("O")):
+    index = 1 + num_vars + originalIndex
+  return index
 
 def append_files(fp, file_name_to_append):
   with open(file_name_to_append) as file_object:
@@ -1632,6 +1676,45 @@ def generate_zaatar_matrices(spec_file, shuffled_indices, qap_file_name):
       NzA += cons_entry.Aij
       NzB += cons_entry.Bij
       NzC += cons_entry.Cij
+    if line.startswith("EXT_GADGET"):
+      (varList, gadgetId) = parse_ext_gadget_pws_line(line)
+
+      # Try calling into gadget binary
+      try:
+        cmd = ["../../pepper/bin/gadget{}".format(gadgetId), "constraints"]
+        p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+      except OSError as e:
+        raise RuntimeError("{}\n\nDoes bin/gadget{} exist?\n".format(e, gadgetId))
+      
+      # Parse output of gadget binary
+      for outLine in iter(p.stdout.readline, b''):
+        try:
+          constraints = json.loads(outLine)
+          assert len(constraints) == 3
+        except Exception as e:
+          raise RuntimeError('''{}\n\nDoes `bin/gadget{} constraints` output the correct format?
+Expecting `[{{aIndex: aValue, ...}}, {{bIndex: bValue, ...}}, {{cIndex: cValue, ...}}]`
+          '''.format(e, gadgetId))
+        
+        # Insert constraints into matrices
+        for matrix, out in {0: fp_matrix_a, 1: fp_matrix_b, 2: fp_matrix_c}.iteritems():
+          for index, value in constraints[matrix].iteritems():
+            if value == "0":
+              continue
+            index  = int(index)
+            # remap index to correct variable name, unless it's 0 (meaning constant 1)
+            if index != 0:
+              (_, varName) = to_var(varList[index-1])
+              index = convert_variable_to_index(varName, shuffled_indices)
+              assert index != 0
+
+            # Libsnark constraints are A*B = C, vs. A*B - C = 0 for Zaatar.
+            # Which is why the C coefficient is negated.
+            if (matrix == 2):
+              value = "-" + value;
+            out.write("{} {} {}\n".format(index, j, value))
+        j = j + 1
+        num_constraints = num_constraints + 1
     else:
       # variable names are directly used in to_basic_constraints.
       # numbering are performed in expand_polynomial_matrixrow.
@@ -2184,6 +2267,26 @@ def generate_computation_exo_compute(terms, pws_file):
 
   pws_file.write(" ".join(newLine) + "\n")
 
+def generate_computation_ext_gadget(terms, pws_file):
+  (inVars, outVars, intermediateVars, gadgetId) = parse_ext_gadget_spec_line(terms)
+  
+  def snd(tup):
+    return tup[1]
+
+  newLine = []
+  newLine.append("EXT_GADGET GADGETID %d INPUTS [" % gadgetId)
+
+  newLine += map(snd,map(to_var,inVars));
+  newLine.append("] OUTPUTS [")
+
+  newLine += map(snd,map(to_var,outVars));
+  newLine.append("] INTERMEDIATE [")
+
+  newLine += map(snd,map(to_var,intermediateVars));
+  newLine.append("]")
+  
+  pws_file.write(" ".join(newLine) + "\n")
+
 def generate_computation_mem_consistency(terms, pws_file):
   (address_width, width, input) = parse_mem_consistency_spec_line(terms)
   # expand constraints to compute the actual input to the benes network.
@@ -2293,6 +2396,8 @@ def generate_computation_line(line, pws_file):
     generate_computation_mem_consistency(terms, pws_file)
   elif line.startswith("EXO_COMPUTE"):
     generate_computation_exo_compute(terms, pws_file)
+  elif line.startswith("EXT_GADGET"):
+    generate_computation_ext_gadget(terms, pws_file)
   else:
     # Depends on whether we have zaatar or ginger constraints
     global framework
