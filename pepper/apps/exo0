@@ -1,0 +1,8 @@
+#!/bin/sh
+
+echo 97
+echo 98
+echo 99
+echo 100
+
+# which are the ascii codes of 'a', 'b', 'c', 'd'
