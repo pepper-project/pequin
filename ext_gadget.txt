@@ -20,7 +20,7 @@ three commands.
 						   gadget and return it separated by a space (including inputs)
 
 An example of ext_gadget in action can be found here:
-    https://github.com/https://github.com/pepper-project/pequin/tree/master/pepper/apps/ext_gadget_example.c
+    https://github.com/pepper-project/pequin/tree/master/pepper/apps/ext_gadget_example.c
 
 The prototype for ext_gadget, were it actually a C function, would look
 something like this:
@@ -45,6 +45,8 @@ compatible with the libgmp function mpq_set_str().
 
 We have an implementation of ext gadgets:
   https://github.com/pepper-project/pequin/tree/master/pepper/ext_gadget_bridge.cpp
+
+To make the binary for the example bridge run `make gadget0` (or any other gadget_number you want to generate) from the pepper directory. This will create `bin/gadget0`.
 
 If you want to see in more detail how the prover constructs the inputs
 and interprets the outputs, here's the code in the prover that actually
