@@ -649,7 +649,7 @@ void ComputationProver::compute_exo_compute(FILE *pws_file) {
     
     // buffer is totally big enough that this is acceptable. tee hee
     char *outLenStr = cmds + strlen(cmds) + 2;
-    sprintf(outLenStr,"%d",outVarsStr.size());
+    sprintf(outLenStr,"%ld",outVarsStr.size());
     std::vector<std::string> pOutTok = execute_command(cmds, outLenStr, procInStr);
 
     int pTok = 0;
@@ -1042,7 +1042,7 @@ void ComputationProver::compute_printf(FILE* pws_file) {
 
   expect_next_token(pws_file, "X", "Format error in printf");
 
-  int64_t args [10];
+  mpz_t args [10];
   if (num_args > 10){
     cout << "ERROR: Cannot have more than 10 arguments to prover's printf!" << endl;
     num_args = 10;
@@ -1051,7 +1051,7 @@ void ComputationProver::compute_printf(FILE* pws_file) {
   for(int i = 0; i < num_args; i++){
     next_token_or_error(pws_file, cmds);
     mpq_t& arg = voc(cmds, temp_q);
-    args[i] = mpz_get_si(mpq_numref(arg));
+    mpz_set_q(args[i], arg);
   }
 
   gmp_printf("PRINTF in computation_p %d:\n", num_args);
