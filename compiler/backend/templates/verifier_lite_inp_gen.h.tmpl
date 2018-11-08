@@ -1,11 +1,11 @@
 \#include <iostream>
 \#include <fstream>
-\#include <string> 
+\#include <string>
 
 \#include <gmp.h>
 
 \#include <input_generation/${computation_classname}_v_inp_gen.h>
 
-void gen_input (mpq_t * input_q, int num_inputs) {
-    ${computation_classname}_input_gen(input_q, num_inputs);
+void gen_input (mpq_t * input_q, int num_inputs, char *argv[]) {
+    ${computation_classname}_input_gen(input_q, num_inputs, argv);
 }

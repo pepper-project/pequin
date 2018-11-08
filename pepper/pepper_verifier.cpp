@@ -27,9 +27,9 @@ void print_usage(char* argv[]) {
 
 void run_setup(int num_constraints, int num_inputs,
                int num_outputs, int num_vars, mpz_t p,
-               string vkey_file, string pkey_file, 
+               string vkey_file, string pkey_file,
                string unprocessed_vkey_file) {
-    
+
     std::ifstream Amat("./bin/" + std::string(NAME) + ".qap.matrix_a");
     std::ifstream Bmat("./bin/" + std::string(NAME) + ".qap.matrix_b");
     std::ifstream Cmat("./bin/" + std::string(NAME) + ".qap.matrix_c");
@@ -54,7 +54,7 @@ void run_setup(int num_constraints, int num_inputs,
     if (mpz_sgn(Acoef) == -1) {
         mpz_add(Acoef, p, Acoef);
     }
-    
+
     //    std::cout << Ai << " " << Aj << " " << Acoef << std::std::endl;
 
     Bmat >> Bi;
@@ -67,7 +67,7 @@ void run_setup(int num_constraints, int num_inputs,
     if (mpz_sgn(Bcoef) == -1) {
         mpz_add(Bcoef, p, Bcoef);
     }
-    
+
     Cmat >> Ci;
     Cmat >> Cj;
     Cmat >> Ccoef;
@@ -82,23 +82,23 @@ void run_setup(int num_constraints, int num_inputs,
         mpz_mul_si(Ccoef, Ccoef, -1);
         mpz_add(Ccoef, p, Ccoef);
     }
-    
+
     int num_intermediate_vars = num_vars;
     int num_inputs_outputs = num_inputs + num_outputs;
-    
+
     q.primary_input_size = num_inputs_outputs;
     q.auxiliary_input_size = num_intermediate_vars;
-    
+
     for (int currentconstraint = 1; currentconstraint <= num_constraints; currentconstraint++) {
         libsnark::linear_combination<FieldT> A, B, C;
-        
-        while(Aj == currentconstraint && Amat) {                  
+
+        while(Aj == currentconstraint && Amat) {
             if (Ai <= num_intermediate_vars && Ai != 0) {
                 Ai += num_inputs_outputs;
             } else if (Ai > num_intermediate_vars) {
                 Ai -= num_intermediate_vars;
             }
-            
+
             FieldT AcoefT(Acoef);
             A.add_term(Ai, AcoefT);
             if(!Amat) {
@@ -106,7 +106,7 @@ void run_setup(int num_constraints, int num_inputs,
             }
             Amat >> Ai;
             Amat >> Aj;
-            Amat >> Acoef; 
+            Amat >> Acoef;
             if (mpz_cmpabs(Acoef, p) > 0) {
                 gmp_printf("WARNING: Coefficient larger than prime (%Zd > %Zd).\n", Acoef, p);
                 mpz_mod(Acoef, Acoef, p);
@@ -115,7 +115,7 @@ void run_setup(int num_constraints, int num_inputs,
                 mpz_add(Acoef, p, Acoef);
             }
         }
-        
+
         while(Bj == currentconstraint && Bmat) {
             if (Bi <= num_intermediate_vars && Bi != 0) {
                 Bi += num_inputs_outputs;
@@ -139,7 +139,7 @@ void run_setup(int num_constraints, int num_inputs,
                 mpz_add(Bcoef, p, Bcoef);
             }
         }
-        
+
         while(Cj == currentconstraint && Cmat) {
             if (Ci <= num_intermediate_vars && Ci != 0) {
                 Ci += num_inputs_outputs;
@@ -147,8 +147,8 @@ void run_setup(int num_constraints, int num_inputs,
                 Ci -= num_intermediate_vars;
             }
             //Libsnark constraints are A*B = C, vs. A*B - C = 0 for Zaatar.
-            //Which is why the C coefficient is negated. 
-            
+            //Which is why the C coefficient is negated.
+
             // std::cout << Ci << " " << Cj << " " << Ccoef << std::std::endl;
             FieldT CcoefT(Ccoef);
             C.add_term(Ci, CcoefT);
@@ -169,12 +169,12 @@ void run_setup(int num_constraints, int num_inputs,
                 mpz_add(Ccoef, p, Ccoef);
             }
         }
-        
+
         q.add_constraint(libsnark::r1cs_constraint<FieldT>(A, B, C));
-        
+
         //dump_constraint(r1cs_constraint<FieldT>(A, B, C), va, variable_annotations);
     }
-    
+
     Amat.close();
     Bmat.close();
     Cmat.close();
@@ -202,17 +202,17 @@ void verify (string verification_key_fn, string inputs_fn, string outputs_fn,
              string proof_fn, int num_inputs, int num_outputs, mpz_t prime) {
 
     libsnark::default_r1cs_ppzksnark_pp::init_public_params();
-   
+
     libsnark::r1cs_variable_assignment<FieldT> inputvec;
     libsnark::r1cs_ppzksnark_proof<libsnark::default_r1cs_ppzksnark_pp> proof;
-    
+
     std::cout << "loading proof from file: " << proof_fn << std::endl;
     std::ifstream proof_file(proof_fn);
     if (!proof_file.good()) {
         std::cerr << "ERROR: " << proof_fn << " not found. " << std::endl;
         exit(1);
     }
-    proof_file >> proof; 
+    proof_file >> proof;
     proof_file.close();
 
     std::cout << "loading inputs from file: " << inputs_fn << std::endl;
@@ -223,7 +223,7 @@ void verify (string verification_key_fn, string inputs_fn, string outputs_fn,
 
     mpq_t tmp; mpq_init(tmp);
     mpz_t tmp_z; mpz_init(tmp_z);
-    
+
     for (int i = 0; i < num_inputs; i++) {
         inputs_file >> tmp;
         convert_to_z(tmp_z, tmp, prime);
@@ -235,11 +235,11 @@ void verify (string verification_key_fn, string inputs_fn, string outputs_fn,
         outputs_file >> tmp;
         convert_to_z(tmp_z, tmp, prime);
         FieldT currentVar(tmp_z);
-        inputvec.push_back(currentVar); 
+        inputvec.push_back(currentVar);
     }
 
     mpq_clear(tmp); mpz_clear(tmp_z);
-    
+
     inputs_file.close();
     outputs_file.close();
 
@@ -252,7 +252,7 @@ void verify (string verification_key_fn, string inputs_fn, string outputs_fn,
     cout << "verifying..." << std::endl;
     libff::start_profiling();
     bool result = libsnark::r1cs_ppzksnark_online_verifier_strong_IC<libsnark::default_r1cs_ppzksnark_pp>(pvk, inputvec, proof);
-   
+
     if (result) {
         cout << "VERIFICATION SUCCESSFUL" << std::endl;
     }
@@ -267,7 +267,7 @@ int main (int argc, char* argv[]) {
         print_usage(argv);
         exit(1);
     }
-    
+
     struct comp_params p = parse_params("./bin/" + string(NAME) + ".params");
 
     mpz_t prime;
@@ -291,7 +291,7 @@ int main (int argc, char* argv[]) {
         run_setup(p.n_constraints, p.n_inputs, p.n_outputs, p.n_vars, prime, verification_key_fn, proving_key_fn, unprocessed_vkey_fn);
     }
     else if (!strcmp(argv[1], "gen_input")) {
-        if (argc != 3) {
+        if (argc < 3) {
             print_usage(argv);
             exit(1);
         }
@@ -302,10 +302,10 @@ int main (int argc, char* argv[]) {
         mpq_t * input_q;
         alloc_init_vec(&input_q, p.n_inputs);
 
-        gen_input(input_q, p.n_inputs);
+        gen_input(input_q, p.n_inputs, argv);
 
         std::ofstream inputs_file(input_filename);
-        
+
         for (int i = 0; i < p.n_inputs; i++) {
             inputs_file << input_q[i] << std::endl;
         }
@@ -329,4 +329,3 @@ int main (int argc, char* argv[]) {
         exit(1);
     }
 }
-
