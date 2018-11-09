@@ -3,8 +3,8 @@
 #include <storage/hasher.h>
 #include <storage/configurable_block_store.h>
 
-void ptrchase_merkle_input_gen (mpq_t * input_q, int num_inputs) {
-    
+void ptrchase_merkle_input_gen (mpq_t * input_q, int num_inputs, char *argv[]) {
+
     char db_file_path[BUFLEN];
     snprintf(db_file_path, BUFLEN - 1, "%s/block_stores/prover_%s", FOLDER_STATE, "default_shared_db");
     ConfigurableBlockStore bs(db_file_path);

@@ -13,7 +13,7 @@ ${computation_classname}VerifierInpGen::${computation_classname}VerifierInpGen()
 
 //Refer to ${output_prefix}_cons.h for constants to use when generating input.
 void ${computation_classname}VerifierInpGen::create_input(mpq_t* input_q, int
-num_inputs) {
+num_inputs, char *argv[]) {
 \#if IS_REDUCER == 0
 ${create_input}
 \#endif

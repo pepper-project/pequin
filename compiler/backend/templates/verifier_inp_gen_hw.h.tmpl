@@ -17,7 +17,7 @@ class ${computation_classname}VerifierInpGenHw : public InputCreator {
   public:
     ${computation_classname}VerifierInpGenHw(Venezia* v);
 
-    void create_input(mpq_t* input_q, int num_inputs);
+    void create_input(mpq_t* input_q, int num_inputs, char *argv[]);
   private:
     Venezia* v;
     ${computation_classname}VerifierInpGen compiler_implementation;

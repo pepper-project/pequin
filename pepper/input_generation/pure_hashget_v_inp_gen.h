@@ -1,8 +1,8 @@
 #include <apps/pure_hashget.h>
 #include <storage/configurable_block_store.h>
 #include <storage/ram_impl.h>
-void pure_hashget_input_gen (mpq_t * input_q, int num_inputs) {
-    
+void pure_hashget_input_gen (mpq_t * input_q, int num_inputs, char *argv[]) {
+
   struct In input;
   struct Out output;
   char db_file_path[BUFLEN];
@@ -24,5 +24,5 @@ void pure_hashget_input_gen (mpq_t * input_q, int num_inputs) {
     mpq_set_ui(input_q[i], input_ptr[i], 1);
   }
   deleteBlockStoreAndRAM();
-  
+
 }
