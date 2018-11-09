@@ -1,7 +1,7 @@
 #include <apps/sparse_matvec.h>
 
-void sparse_matvec_input_gen (mpq_t * input_q, int num_inputs) {
-    
+void sparse_matvec_input_gen (mpq_t * input_q, int num_inputs, char *argv[]) {
+
   srand(time(NULL));
   // randomly distribute elements into rows
   int buckets[N] = {0,};

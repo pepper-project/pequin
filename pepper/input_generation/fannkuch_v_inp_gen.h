@@ -1,6 +1,6 @@
 
 
-void fannkuch_input_gen (mpq_t * input_q, int num_inputs) {
+void fannkuch_input_gen (mpq_t * input_q, int num_inputs, char *argv[]) {
 
     int m = 13;
 
