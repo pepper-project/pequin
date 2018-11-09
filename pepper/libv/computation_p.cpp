@@ -1051,6 +1051,7 @@ void ComputationProver::compute_printf(FILE* pws_file) {
   for(int i = 0; i < num_args; i++){
     next_token_or_error(pws_file, cmds);
     mpq_t& arg = voc(cmds, temp_q);
+    mpz_init(args[i]);
     mpz_set_q(args[i], arg);
   }
 
