@@ -2,7 +2,7 @@
 #include <apps/tolling.h>
 
 
-int set_tuple(mpq_t* input_q, int inp, t_tuple_t* t_tuple){
+int set_tuple(mpq_t* input_q, int inp, t_tuple_t* t_tuple, char *argv[]){
   mpq_set_si(input_q[inp++], t_tuple->time, 1);
   mpq_set_ui(input_q[inp++], t_tuple->toll_booth_id, 1);
   mpq_set_ui(input_q[inp++], t_tuple->toll, 1);
@@ -29,9 +29,9 @@ void tolling_input_gen (mpq_t * input_q, int num_inputs) {
     //CK bit string acting like a salt
     commitmentCK_t CK = {{
             //Randomly generated.
-            0x8a, 0xf7, 0x24, 0xa1, 0x58, 
-            0xc9, 0x8b, 0x89, 0x29, 0x85, 
-            0xce, 0xa1, 0xae, 0xc3, 0x42, 
+            0x8a, 0xf7, 0x24, 0xa1, 0x58,
+            0xc9, 0x8b, 0x89, 0x29, 0x85,
+            0xce, 0xa1, 0xae, 0xc3, 0x42,
             0x6e, 0xbb, 0x86, 0x56, 0x37
         }};
     setcommitmentCK(&CK);
@@ -49,7 +49,7 @@ void tolling_input_gen (mpq_t * input_q, int num_inputs) {
     for(i = 0; i < NUM_COMMITMENT_CHUNKS; i++){
         mpq_set_ui(input_q[inp++], commitment.bit[i], 1);
     }
-    
+
     //Fill in the rest of the input (verifier's inputs)
     for(i = 0; i < MAX_SPOTCHECKS; i++){
         //Choose the ith tuple in the db

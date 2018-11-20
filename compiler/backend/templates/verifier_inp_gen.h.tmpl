@@ -12,7 +12,7 @@ class ${computation_classname}VerifierInpGen : public InputCreator {
   public:
     ${computation_classname}VerifierInpGen();
 
-    virtual void create_input(mpq_t* input_q, int num_inputs);
+    virtual void create_input(mpq_t* input_q, int num_inputs, char *argv[]);
 
     Venezia* v;
 };
