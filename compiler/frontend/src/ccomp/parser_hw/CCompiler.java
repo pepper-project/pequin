@@ -1849,6 +1849,7 @@ public class CCompiler {
 
 			// NONSTANDARD "int128" extension
 			typetable.put(join(signString, "int128"), intType(signString, 128));
+			typetable.put(join(signString, "field"), intType(signString, 254));
 		}
 
 		// NONSTANDARD "bool" extension
