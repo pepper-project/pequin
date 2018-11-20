@@ -1847,8 +1847,7 @@ public class CCompiler {
 			typetable.put(join(signString, "long long int"),
 					intType(signString, 64)); // "At least 64 bits in size"
 
-			// NONSTANDARD "int128" extension
-			typetable.put(join(signString, "int128"), intType(signString, 128));
+			// NONSTANDARD "field" extension representing the underlying prime field
 			typetable.put(join(signString, "field"), intType(signString, 254));
 		}
 
