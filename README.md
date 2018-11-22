@@ -74,6 +74,13 @@ other distros), see [INSTALLING.md](INSTALLING.md) and [compiler/buffetfsm/READM
 Once everything is set up, you're ready to run some verifiable
 computations! Please see [GETTINGSTARTED.md](GETTINGSTARTED.md) for a quick overview of the process.
 
+## Docker ##
+A dockerfile is provided to build a base docker image to use with projects. Just run:
+
+```bash
+./build_docker.sh
+```
+Pequin will be in `/opt/pequin/`, and can be addressed in your scripts using `$PEQUIN` environment variable. Pepper is at `/opt/pequin/pepper`.
 ## Contact ##
 
 Please contact pepper@pepper-project.org for any questions and comments. We are happy to work with you to adapt this technology into your application.
