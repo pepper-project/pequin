@@ -45,7 +45,7 @@ XOR_ASSIGN,OR_ASSIGN,TYPE_NAME,ASSIGN,
 
 TYPEDEF,EXTERN,STATIC,AUTO,REGISTER,
 INLINE,NORETURN,
-CHAR,SHORT,INT,LONG,SIGNED,UNSIGNED,FLOAT,DOUBLE,CONST,VOLATILE,VOID,FIELD,
+CHAR,SHORT,INT,LONG,SIGNED,UNSIGNED,FLOAT,DOUBLE,CONST,VOLATILE,VOID,FIELD254,
 STRUCT,UNION,ENUM,ELLIPSIS,
 
 CASE,DEFAULT,IF,ELSE,SWITCH,WHILE,DO,FOR,GOTO,CONTINUE,BREAK,RETURN,
@@ -352,7 +352,7 @@ type_specifier
   | struct_or_union_specifier.a {: return new Symbol(a); :}
   | enum_specifier {: throw new RuntimeException(placeholder_re); :}
   | TYPE_NAME.a {: return new Symbol(new TypeSpecification(a)); :}
-  | FIELD {: return new Symbol(new TypeSpecification("field")); :}
+  | FIELD254 {: return new Symbol(new TypeSpecification("field254")); :}
   ;
 
 struct_or_union_specifier
