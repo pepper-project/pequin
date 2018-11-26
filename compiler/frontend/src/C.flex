@@ -137,7 +137,7 @@ Comment = {TraditionalComment} | {EndOfLineComment}
   "else"      { return token(ELSE); }
   "enum"      { return token(ENUM); }
   "extern"    { return token(EXTERN); }
-  "int128"     { return token(INT128); }
+  "field254"     { return token(FIELD254); }
   "float"      { return token(FLOAT); }
   "for"      { return token(FOR); }
   "goto"      { return token(GOTO); }
