@@ -2,7 +2,7 @@ CXX = g++
 
 # according to libsnark's documentation, we need to use the same conditional defines libsnark was compiled with, as found in
 # thirdparty/libsnark/build/libsnark/CMakeFiles/snark.dir/flags.make
-CXXFLAGS = -m64 -std=c++11 -DCURVE_BN128 -DBN_SUPPORT_SNARK -DBINARY_OUTPUT -DMONTGOMERY_OUTPUT -DNO_PROCPS -DUSE_ASM
+CXXFLAGS = -m64 -std=c++11 -DCURVE_BN128 -DBN_SUPPORT_SNARK -UBINARY_OUTPUT -DMONTGOMERY_OUTPUT -DNO_PROCPS -DUSE_ASM
 
 AR	:= ar rcs
 
