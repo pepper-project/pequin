@@ -18,22 +18,27 @@
 #error "Must define NAME as name of computation."
 #endif
 
+enum Mode {proof, only_setup, witness_export };
+
 void print_usage(char* argv[]) {
     std::cout << "usage: " << std::endl <<
         "(1)" << argv[0] << " setup" << std::endl <<
-        "(2) " << argv[0] << " prove <proving key file> <inputs file> <outputs file> <proof file>" << std::endl;
+        "(2) " << argv[0] << " prove <proving key file> <inputs file> <outputs file> <proof file>" << std::endl <<
+        "(3) " << argv[0] << " witness <inputs file> <witness file>" << std::endl;
 }
 
 int main (int argc, char* argv[]) {
     
-    if (argc != 2 && argc != 6) {
+    if (argc != 2 && argc != 6 && argc != 4) {
         print_usage(argv);
         exit(1);
     }
 
-    bool only_setup = false;
-    if (!strcmp(argv[1], "setup")) {
-        only_setup = true;
+    Mode mode = Mode::proof;
+    if (strcmp(argv[1], "setup") == 0) {
+        mode = Mode::only_setup;
+    } else if(strcmp(argv[1], "witness") == 0) {
+        mode = Mode::witness_export;
     }
 
     struct comp_params p = parse_params("./bin/" + string(NAME) + ".params");
@@ -42,28 +47,17 @@ int main (int argc, char* argv[]) {
     mpz_t prime;
     mpz_init_set_str(prime, "21888242871839275222246405745257275088548364400416034343698204186575808495617", 10);
 
-    if (only_setup) {
-        ComputationProver prover(p.n_vars, p.n_constraints, p.n_inputs, p.n_outputs, prime, "default_shared_db", "", only_setup);
+    if (mode == Mode::only_setup) {
+        ComputationProver prover(p.n_vars, p.n_constraints, p.n_inputs, p.n_outputs, prime, "default_shared_db", "", true);
         return 0;
     }
 
-    std::string pk_filename = string(p_dir) + argv[2];
-    std::string input_fn = string(shared_dir) + argv[3];
-    std::string output_fn = string(shared_dir) + argv[4];
-    std::string proof_fn = string(shared_dir) + argv[5];
+    std::string input_fn = string(shared_dir) + (mode == Mode::proof ? argv[3] : argv[2]);
 
-    ComputationProver prover(p.n_vars, p.n_constraints, p.n_inputs, p.n_outputs, prime, "default_shared_db", input_fn, only_setup);
+    ComputationProver prover(p.n_vars, p.n_constraints, p.n_inputs, p.n_outputs, prime, "default_shared_db", input_fn, false);
     prover.compute_from_pws(("./bin/" + std::string(NAME) + ".pws").c_str());
-    
     libsnark::default_r1cs_ppzksnark_pp::init_public_params();
-    std::ifstream pkey(pk_filename);
-    if (!pkey.is_open()) {
-        std::cerr << "ERROR: " << pk_filename << " not found. Try running ./verifier_setup <computation> first." << std::endl;
-    }
 
-    libsnark::r1cs_ppzksnark_keypair<libsnark::default_r1cs_ppzksnark_pp> keypair;
-    std::cout << "reading proving key from file..." << std::endl;
-    pkey >> keypair.pk;
     libsnark::r1cs_ppzksnark_primary_input<libsnark::default_r1cs_ppzksnark_pp> primary_input;
     libsnark::r1cs_ppzksnark_auxiliary_input<libsnark::default_r1cs_ppzksnark_pp> aux_input;
 
@@ -81,6 +75,27 @@ int main (int argc, char* argv[]) {
         FieldT currentVar(prover.F1[i]);
         aux_input.push_back(currentVar);
     }
+
+    if (mode == Mode::witness_export) {
+        std::ofstream witness_file(string(p_dir) + argv[3]);
+        std::ostream_iterator<FieldT> output_iterator(witness_file, " ");
+        std::copy(primary_input.cbegin(), primary_input.cend(), output_iterator);
+        std::copy(aux_input.cbegin(), aux_input.cend(), output_iterator);
+        return 0;
+    }
+
+    std::string pk_filename = string(p_dir) + argv[2];
+    std::string output_fn = string(shared_dir) + argv[4];
+    std::string proof_fn = string(shared_dir) + argv[5];
+
+    std::ifstream pkey(pk_filename);
+    if (!pkey.is_open()) {
+        std::cerr << "ERROR: " << pk_filename << " not found. Try running ./verifier_setup <computation> first." << std::endl;
+    }
+
+    libsnark::r1cs_ppzksnark_keypair<libsnark::default_r1cs_ppzksnark_pp> keypair;
+    std::cout << "reading proving key from file..." << std::endl;
+    pkey >> keypair.pk;
 
     libff::start_profiling();
     libsnark::r1cs_ppzksnark_proof<libsnark::default_r1cs_ppzksnark_pp> proof = libsnark::r1cs_ppzksnark_prover<libsnark::default_r1cs_ppzksnark_pp>(keypair.pk, primary_input, aux_input);
