@@ -14,7 +14,7 @@ echo 1
 ##### Explanation and usage ####
 
 # The prime factors of 301 are 7 and 43. 
-# However, larger primes have more than just 2 factors. The number of factors should be oblivious 
+# However, larger numbers have more than just 2 factors. The number of factors should be oblivious 
 # to both the program (pepper/apps/prover_knows_factorization.c) and the verifier. 
 
 # Thus, we use an upper bound (NUM_OF_FACTORS_UPPER_BOUND = 10) to the number of factors.
