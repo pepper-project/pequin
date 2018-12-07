@@ -1676,7 +1676,7 @@ def generate_zaatar_matrices(spec_file, shuffled_indices, qap_file_name):
       NzA += cons_entry.Aij
       NzB += cons_entry.Bij
       NzC += cons_entry.Cij
-    if line.startswith("EXT_GADGET"):
+    elif line.startswith("EXT_GADGET"):
       (varList, gadgetId) = parse_ext_gadget_pws_line(line)
 
       # Try calling into gadget binary
