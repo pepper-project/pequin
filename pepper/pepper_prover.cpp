@@ -27,6 +27,16 @@ void print_usage(char* argv[]) {
         "(3) " << argv[0] << " witness <inputs file> <witness file>" << std::endl;
 }
 
+void export_witness(const char* filename, libsnark::r1cs_ppzksnark_primary_input<libsnark::default_r1cs_ppzksnark_pp> values) {
+    mpz_t r; mpz_init(r);
+    FILE *file = fopen(filename, "w");
+    for (auto& value : values) {
+        value.as_bigint().to_mpz(r);
+        gmp_fprintf(file, "%Zd\n", r);
+    }
+    fclose(file);
+}
+
 int main (int argc, char* argv[]) {
     
     if (argc != 2 && argc != 6 && argc != 4) {
@@ -77,10 +87,8 @@ int main (int argc, char* argv[]) {
     }
 
     if (mode == Mode::witness_export) {
-        std::ofstream witness_file(string(p_dir) + argv[3]);
-        std::ostream_iterator<FieldT> output_iterator(witness_file, " ");
-        std::copy(primary_input.cbegin(), primary_input.cend(), output_iterator);
-        std::copy(aux_input.cbegin(), aux_input.cend(), output_iterator);
+        export_witness((string(p_dir) + argv[3] + ".primary").c_str(), primary_input);
+        export_witness((string(p_dir) + argv[3] + ".aux").c_str(), aux_input);
         return 0;
     }
 
@@ -109,5 +117,4 @@ int main (int argc, char* argv[]) {
         output_file << prover.input_output_q[p.n_inputs + i] << std::endl;
     }
     output_file.close();
-
 }
