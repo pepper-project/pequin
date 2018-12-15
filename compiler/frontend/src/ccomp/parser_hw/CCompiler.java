@@ -62,7 +62,12 @@ import SFE.Compiler.Operators.ArrayAccessOperator;
 import SFE.Compiler.Operators.BitwiseOperator;
 import SFE.Compiler.Operators.CStyleCast;
 import SFE.Compiler.Operators.DivisionOperator;
+import SFE.Compiler.Operators.EqualOperator;
 import SFE.Compiler.Operators.GetPointerOperator;
+import SFE.Compiler.Operators.GreaterEqualOperator;
+import SFE.Compiler.Operators.GreaterOperator;
+import SFE.Compiler.Operators.LessEqualOperator;
+import SFE.Compiler.Operators.LessOperator;
 import SFE.Compiler.Operators.MinusOperator;
 import SFE.Compiler.Operators.NotEqualOperator;
 import SFE.Compiler.Operators.Operator;
@@ -2197,6 +2202,21 @@ public class CCompiler {
 					return toInt(kop.left) / toInt(kop.right);
 				}
 			}
+			if (kop.operator instanceof GreaterOperator) {
+				return toInt(kop.left) > toInt(kop.right) ? 1 : 0;
+			}
+			if (kop.operator instanceof GreaterEqualOperator) {
+				return toInt(kop.left) >= toInt(kop.right) ? 1 : 0;
+			}
+			if (kop.operator instanceof LessOperator) {
+				return toInt(kop.left) < toInt(kop.right) ? 1 : 0;
+			}
+			if (kop.operator instanceof LessEqualOperator) {
+				return toInt(kop.left) <= toInt(kop.right) ? 1 : 0;
+			}
+			if (kop.operator instanceof EqualOperator) {
+				return toInt(kop.left) == toInt(kop.right) ? 1 : 0;
+			}
 			throw new RuntimeException("Constant handling of " + kop.operator
 					+ " op expressions not yet handled");
 		} else if (k instanceof Identifier) {
@@ -2207,6 +2227,13 @@ public class CCompiler {
 				if (ic != null) {
 					return ic.toInt();
 				}
+			}
+		} else if (k instanceof ConditionalExpression) {
+			ConditionalExpression c = (ConditionalExpression) k;
+			if (toInt(c.cond) > 0) {
+				return toInt(c.the);
+			} else {
+				return toInt(c.els);
 			}
 		}
 
