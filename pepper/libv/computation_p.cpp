@@ -1405,12 +1405,11 @@ void ComputationProver::compute_from_pws(const char* pws_filename) {
     } else if (strcmp(tok, "ASSERT_ZERO") == 0) {
       next_token_or_error(pws_file, cmds);
       mpq_t& Y = voc(cmds, temp_q);
-      //std::string var(*cmds);
-      //cmds++;
+      mpz_t Z; mpz_init(Z);
+      convert_to_z(Z, Y, prime);
       std::string var(cmds);
-      if (mpq_sgn(Y) != 0){
-        cout << "ASSERT_ZERO FAILED: " << var << endl;
-        ////exit(1);
+      if (mpz_sgn(Z) != 0){
+        cout << "ASSERT_ZERO FAILED: " << var << " is " << mpz_get_str(NULL, 10, Z) << endl;
       }
     } else if (strcmp(tok, "RAMGET_FAST") == 0) {
       compute_fast_ramget(pws_file);
