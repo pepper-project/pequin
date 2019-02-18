@@ -176,7 +176,6 @@ clean:
 	rm -f ../compiler/backend/tmptime
 	rm -f ../compiler/tmptime
 	cd ../compiler/frontend; make clean; 
-	cd ../compiler/buffetfsm; make clean;
 
 gadget%: ext_gadget_bridge.cpp
 	$(CXX) $(CXXFLAGS) -UBINARY_OUTPUT -DNAME=\"$(TARG)\" $(IFLAGS)  $<  -o $(BINDIR)/$@ $(COMMON_LIB_OBJFILES) $(LDFLAGS)

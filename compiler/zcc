@@ -165,7 +165,15 @@ if [ "$extension" == "c" ]; then
           if [ $? != 0 ]; then
           {
               echo "Failed to build FSM transformer. Please make sure you have compiled LLVM."
-              exit 1
+
+              if [ ! -f buffetfsm ]; then
+              {
+                echo "FSM transformer not found. Terminating"
+                exit 1
+              }
+              else
+                echo "Found existing FSM transformer binary. Continuing without recompilation."
+              fi
           } fi
 
           cd ..

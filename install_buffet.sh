@@ -7,3 +7,8 @@ mkdir llvm-build
 cd llvm-build
 $PWD/../llvm/configure --prefix=$PWD/../toolchain --enable-shared --enable-optimized
 make -j$(nproc)
+
+# The commands below build the actual loop transformer binary.
+
+cd ..
+make
