@@ -3,8 +3,8 @@
 
 
 #include <libsnark/relations/constraint_satisfaction_problems/r1cs/r1cs.hpp>
-#include <libsnark/common/default_types/r1cs_ppzksnark_pp.hpp>
-#include <libsnark/zk_proof_systems/ppzksnark/r1cs_ppzksnark/r1cs_ppzksnark.hpp>
+#include <libsnark/common/default_types/r1cs_gg_ppzksnark_pp.hpp>
+#include <libsnark/zk_proof_systems/ppzksnark/r1cs_gg_ppzksnark/r1cs_gg_ppzksnark.hpp>
 
 #include <iostream>
 #include <fstream>
@@ -27,7 +27,7 @@ void print_usage(char* argv[]) {
         "(3) " << argv[0] << " witness <inputs file> <witness file>" << std::endl;
 }
 
-void export_witness(const char* filename, libsnark::r1cs_ppzksnark_primary_input<libsnark::default_r1cs_ppzksnark_pp> values) {
+void export_witness(const char* filename, libsnark::r1cs_gg_ppzksnark_primary_input<libsnark::default_r1cs_gg_ppzksnark_pp> values) {
     mpz_t r; mpz_init(r);
     FILE *file = fopen(filename, "w");
     for (auto& value : values) {
@@ -66,10 +66,10 @@ int main (int argc, char* argv[]) {
 
     ComputationProver prover(p.n_vars, p.n_constraints, p.n_inputs, p.n_outputs, prime, "default_shared_db", input_fn, false);
     prover.compute_from_pws(("./bin/" + std::string(NAME) + ".pws").c_str());
-    libsnark::default_r1cs_ppzksnark_pp::init_public_params();
+    libsnark::default_r1cs_gg_ppzksnark_pp::init_public_params();
 
-    libsnark::r1cs_ppzksnark_primary_input<libsnark::default_r1cs_ppzksnark_pp> primary_input;
-    libsnark::r1cs_ppzksnark_auxiliary_input<libsnark::default_r1cs_ppzksnark_pp> aux_input;
+    libsnark::r1cs_gg_ppzksnark_primary_input<libsnark::default_r1cs_gg_ppzksnark_pp> primary_input;
+    libsnark::r1cs_gg_ppzksnark_auxiliary_input<libsnark::default_r1cs_gg_ppzksnark_pp> aux_input;
 
     for (int i = 0; i < p.n_inputs; i++) {
         FieldT currentVar(prover.input[i]);
@@ -101,12 +101,12 @@ int main (int argc, char* argv[]) {
         std::cerr << "ERROR: " << pk_filename << " not found. Try running ./verifier_setup <computation> first." << std::endl;
     }
 
-    libsnark::r1cs_ppzksnark_keypair<libsnark::default_r1cs_ppzksnark_pp> keypair;
+    libsnark::r1cs_gg_ppzksnark_keypair<libsnark::default_r1cs_gg_ppzksnark_pp> keypair;
     std::cout << "reading proving key from file..." << std::endl;
     pkey >> keypair.pk;
 
     libff::start_profiling();
-    libsnark::r1cs_ppzksnark_proof<libsnark::default_r1cs_ppzksnark_pp> proof = libsnark::r1cs_ppzksnark_prover<libsnark::default_r1cs_ppzksnark_pp>(keypair.pk, primary_input, aux_input);
+    libsnark::r1cs_gg_ppzksnark_proof<libsnark::default_r1cs_gg_ppzksnark_pp> proof = libsnark::r1cs_gg_ppzksnark_prover<libsnark::default_r1cs_gg_ppzksnark_pp>(keypair.pk, primary_input, aux_input);
 
     std::ofstream proof_file(proof_fn);
     proof_file << proof; 

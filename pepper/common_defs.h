@@ -7,7 +7,7 @@ constexpr auto v_dir = "./verification_material/";
 constexpr auto p_dir = "./proving_material/";
 constexpr auto shared_dir = "./prover_verifier_shared/";
 
-typedef libff::Fr<libsnark::default_r1cs_ppzksnark_pp> FieldT;
+typedef libff::Fr<libsnark::default_r1cs_gg_ppzksnark_pp> FieldT;
 
 struct comp_params {
     int n_constraints;

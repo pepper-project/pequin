@@ -6,8 +6,8 @@
 #include <common/utility.h>
 
 #include <libsnark/relations/constraint_satisfaction_problems/r1cs/r1cs.hpp>
-#include <libsnark/common/default_types/r1cs_ppzksnark_pp.hpp>
-#include <libsnark/zk_proof_systems/ppzksnark/r1cs_ppzksnark/r1cs_ppzksnark.hpp>
+#include <libsnark/common/default_types/r1cs_gg_ppzksnark_pp.hpp>
+#include <libsnark/zk_proof_systems/ppzksnark/r1cs_gg_ppzksnark/r1cs_gg_ppzksnark.hpp>
 
 #include <common/utility.h>
 #include <gen/input_gen.h>
@@ -34,7 +34,7 @@ void run_setup(int num_constraints, int num_inputs,
     std::ifstream Bmat("./bin/" + std::string(NAME) + ".qap.matrix_b");
     std::ifstream Cmat("./bin/" + std::string(NAME) + ".qap.matrix_c");
 
-    libsnark::default_r1cs_ppzksnark_pp::init_public_params();
+    libsnark::default_r1cs_gg_ppzksnark_pp::init_public_params();
     libsnark::r1cs_constraint_system<FieldT> q;
 
     int Ai, Aj, Bi, Bj, Ci, Cj;
@@ -180,8 +180,8 @@ void run_setup(int num_constraints, int num_inputs,
     Cmat.close();
 
     libff::start_profiling();
-    libsnark::r1cs_ppzksnark_keypair<libsnark::default_r1cs_ppzksnark_pp> keypair = libsnark::r1cs_ppzksnark_generator<libsnark::default_r1cs_ppzksnark_pp>(q);
-    libsnark::r1cs_ppzksnark_processed_verification_key<libsnark::default_r1cs_ppzksnark_pp> pvk = libsnark::r1cs_ppzksnark_verifier_process_vk<libsnark::default_r1cs_ppzksnark_pp>(keypair.vk);
+    libsnark::r1cs_gg_ppzksnark_keypair<libsnark::default_r1cs_gg_ppzksnark_pp> keypair = libsnark::r1cs_gg_ppzksnark_generator<libsnark::default_r1cs_gg_ppzksnark_pp>(q);
+    libsnark::r1cs_gg_ppzksnark_processed_verification_key<libsnark::default_r1cs_gg_ppzksnark_pp> pvk = libsnark::r1cs_gg_ppzksnark_verifier_process_vk<libsnark::default_r1cs_gg_ppzksnark_pp>(keypair.vk);
 
 
     std::ofstream vkey(vkey_file);
@@ -201,10 +201,10 @@ void run_setup(int num_constraints, int num_inputs,
 void verify (string verification_key_fn, string inputs_fn, string outputs_fn,
              string proof_fn, int num_inputs, int num_outputs, mpz_t prime) {
 
-    libsnark::default_r1cs_ppzksnark_pp::init_public_params();
+    libsnark::default_r1cs_gg_ppzksnark_pp::init_public_params();
 
     libsnark::r1cs_variable_assignment<FieldT> inputvec;
-    libsnark::r1cs_ppzksnark_proof<libsnark::default_r1cs_ppzksnark_pp> proof;
+    libsnark::r1cs_gg_ppzksnark_proof<libsnark::default_r1cs_gg_ppzksnark_pp> proof;
 
     std::cout << "loading proof from file: " << proof_fn << std::endl;
     std::ifstream proof_file(proof_fn);
@@ -245,13 +245,13 @@ void verify (string verification_key_fn, string inputs_fn, string outputs_fn,
 
     cout << "loading vk from file: " << verification_key_fn << std::endl;
     std::ifstream vkey(verification_key_fn);
-    libsnark::r1cs_ppzksnark_processed_verification_key<libsnark::default_r1cs_ppzksnark_pp> pvk;
+    libsnark::r1cs_gg_ppzksnark_processed_verification_key<libsnark::default_r1cs_gg_ppzksnark_pp> pvk;
     vkey >> pvk;
     vkey.close();
 
     cout << "verifying..." << std::endl;
     libff::start_profiling();
-    bool result = libsnark::r1cs_ppzksnark_online_verifier_strong_IC<libsnark::default_r1cs_ppzksnark_pp>(pvk, inputvec, proof);
+    bool result = libsnark::r1cs_gg_ppzksnark_online_verifier_strong_IC<libsnark::default_r1cs_gg_ppzksnark_pp>(pvk, inputvec, proof);
 
     if (result) {
         cout << "VERIFICATION SUCCESSFUL" << std::endl;
