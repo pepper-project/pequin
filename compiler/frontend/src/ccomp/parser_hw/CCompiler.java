@@ -230,7 +230,7 @@ public class CCompiler {
 					if (found) {
 						name = prefix + "$" + name;
 					}
-					if (!found && prefix.startsWith("LEXICAL_RESET_SEPARATOR")) {
+					if (!found && prefix.startsWith(LEXICAL_RESET_SEPARATOR)) {
 						break; // Don't look below lexical_reset: prefixes.
 					}
 				}
