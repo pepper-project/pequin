@@ -1,0 +1,18 @@
+The printf function is available for use in verifiable computations for
+debugging purposes. Using printf in a verifiable computation causes the
+compiler to emit at PRINTF statement in the prover worksheet, which the prover
+interprets when solving the constraints.
+
+The implementation has the following limitations:
+
+- All printf calls will always be printed, even if they are in conditionals
+  which resolve to false at runtime. The execption is conditionals which can
+  be resolved to false at compile time.
+
+- printf accepts up to 10 arguments.
+
+- The %Zd format specifier should be used for all integer types. (When solving
+  the constraints, the prover uses arbitrary precision integers for all types
+  and Pepper's printf is implemented by passing these directly to gmp's
+  printf.)
+
