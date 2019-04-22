@@ -39,6 +39,16 @@ public class RamGetEnhancedStatement extends StatementWithOutputLine implements
 		if (value.size() > 1) {
 			for (int i = 0; i < value.size(); i++) {
 				LvalExpression lval = value.fieldEltAt(i);
+                if (lval.getLvalue() instanceof VarLvalue) {
+					Type declaredType = ((VarLvalue) lval.getLvalue()).getDeclaredType();
+					lval.getLvalue().setType(declaredType);
+				} else {
+					throw new RuntimeException("Failed to reset the type of the lvalue " +
+							lval.getLvalue().toString() + " to its declared type after " +
+							"ramget: I don't know how to determine the declared type " +
+							"of a " + lval.getClass() + "."
+					);
+				}
 				Expression fieldAddr = new BinaryOpExpression(new PlusOperator(),
 				    address, IntConstant.valueOf(i));
 				Statement ramget = new RamGetEnhancedStatement(lval, fieldAddr);
