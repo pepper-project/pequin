@@ -61,6 +61,7 @@ echo "installing libsnark"
 cp libsnark_compilerflag.patch libsnark
 cd libsnark
 git checkout dc78fdae02b437bb6c838a82f9261c49bbd7723e && git reset --hard dc78fdae02b437bb6c838a82f9261c49bbd7723e
+cp ../libsnark_gitmodules .gitmodules
 git submodule init && git submodule update
 git apply libsnark_compilerflag.patch
 mkdir -p build && cd build
