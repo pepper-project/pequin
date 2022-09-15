@@ -1,8 +1,10 @@
---- lib/Sema/SemaDeclAttr.cpp   (revision 209914)
-+++ lib/Sema/SemaDeclAttr.cpp   (working copy)
-@@ -4054,6 +4054,9 @@
-     // Type attributes are handled elsewhere; silently move on.
-     assert(Attr.isTypeAttr() && "Non-type attribute not handled");
+Index: lib/Sema/SemaDeclAttr.cpp
+===================================================================
+--- lib/Sema/SemaDeclAttr.cpp	(revision 319532)
++++ lib/Sema/SemaDeclAttr.cpp	(working copy)
+@@ -5997,6 +5997,9 @@
+     S.Diag(Attr.getLoc(), diag::err_stmt_attribute_invalid_on_decl)
+         << Attr.getName() << D->getLocation();
      break;
 +  case AttributeList::AT_LoopFlatten:
 +    S.Diag(Attr.getLoc(), diag::err_attribute_invalid_on_decl) << Attr.getName() << D->getLocStart();

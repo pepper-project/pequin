@@ -1,6 +1,8 @@
---- include/clang/Basic/Attr.td (revision 209914)
-+++ include/clang/Basic/Attr.td (working copy)
-@@ -382,6 +382,13 @@
+Index: include/clang/Basic/Attr.td
+===================================================================
+--- include/clang/Basic/Attr.td	(revision 319532)
++++ include/clang/Basic/Attr.td	(working copy)
+@@ -612,6 +612,13 @@
    let Documentation = [Undocumented];
  }
  
@@ -12,5 +14,5 @@
 +}
 +
  def ARMInterrupt : InheritableAttr, TargetSpecificAttr<TargetARM> {
-   // NOTE: If you add any additional spellings, MSP430Interrupt's spellings
-   // must match.
+   // NOTE: If you add any additional spellings, MSP430Interrupt's,
+   // MipsInterrupt's and AnyX86Interrupt's spellings must match.
